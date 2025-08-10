@@ -9,8 +9,8 @@ RUN_DIR = BASE_DIR / "run"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 RUN_DIR.mkdir(parents=True, exist_ok=True)
 
-# Networking
-bind = "0.0.0.0:8000"
+# Networking - 使用80端口用于生产环境
+bind = "0.0.0.0:80"
 
 # Processes
 workers = max(2, multiprocessing.cpu_count() // 2 or 1)
