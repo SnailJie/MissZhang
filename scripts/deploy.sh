@@ -36,20 +36,20 @@ cd "$APP_DIR"
 echo "🚀 启动应用..."
 bash scripts/start.sh
 
-# 配置防火墙
-echo "🔥 配置防火墙..."
-if command -v ufw &> /dev/null; then
-    ufw allow 80/tcp
-    ufw allow 443/tcp
-    echo "✅ UFW防火墙已配置"
-elif command -v firewall-cmd &> /dev/null; then
-    firewall-cmd --permanent --add-port=80/tcp
-    firewall-cmd --permanent --add-port=443/tcp
-    firewall-cmd --reload
-    echo "✅ firewalld防火墙已配置"
-else
-    echo "⚠️  未检测到防火墙，请手动配置"
-fi
+# # 配置防火墙
+# echo "🔥 配置防火墙..."
+# if command -v ufw &> /dev/null; then
+#     ufw allow 80/tcp
+#     ufw allow 443/tcp
+#     echo "✅ UFW防火墙已配置"
+# elif command -v firewall-cmd &> /dev/null; then
+#     firewall-cmd --permanent --add-port=80/tcp
+#     firewall-cmd --permanent --add-port=443/tcp
+#     firewall-cmd --reload
+#     echo "✅ firewalld防火墙已配置"
+# else
+#     echo "⚠️  未检测到防火墙，请手动配置"
+# fi
 
 # 等待应用启动
 echo "⏳ 等待应用启动..."
