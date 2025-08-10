@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% set title = 'Miss Zhang · 让灵感落地' %}
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <h1>Miss Zhang</h1>
+    <p class="tagline">一口清风，两勺阳光。让灵感在这里轻轻落地。</p>
+    <a href="#contact" class="cta">开始了解</a>
+  </div>
+</section>
+
+<section class="features">
+  <div class="container grid">
+    <div class="card">
+      <div class="icon">🌈</div>
+      <h3>轻松愉快</h3>
+      <p>明快的配色和顺滑的交互，给你舒适的浏览体验。</p>
+    </div>
+    <div class="card">
+      <div class="icon">⚡</div>
+      <h3>快速响应</h3>
+      <p>后端采用 Python 架构，接口简洁高效，响应迅速。</p>
+    </div>
+    <div class="card">
+      <div class="icon">🧩</div>
+      <h3>灵活扩展</h3>
+      <p>前后端代码结构清晰，易于定制与扩展。</p>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="contact">
+  <div class="container">
+    <h2>联系我们</h2>
+    <p>留下你的信息，我们会尽快与您联系。</p>
+    <form id="contact-form" class="contact-form">
+      <div class="form-row">
+        <label for="name">姓名</label>
+        <input type="text" id="name" name="name" placeholder="你的名字" required maxlength="100" />
+      </div>
+      <div class="form-row">
+        <label for="email">邮箱</label>
+        <input type="email" id="email" name="email" placeholder="name@example.com" required maxlength="200" />
+      </div>
+      <div class="form-row">
+        <label for="message">留言</label>
+        <textarea id="message" name="message" placeholder="想说的话..." required maxlength="5000"></textarea>
+      </div>
+      <button type="submit" class="btn-submit">发送</button>
+      <div id="form-toast" class="toast" role="status" aria-live="polite"></div>
+    </form>
+  </div>
+</section>
+{% endblock %} 
