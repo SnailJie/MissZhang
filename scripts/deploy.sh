@@ -10,18 +10,6 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# 更新系统包
-echo "📦 更新系统包..."
-if command -v apt-get &> /dev/null; then
-    apt-get update
-    apt-get install -y python3 python3-venv python3-pip curl sqlite3
-elif command -v yum &> /dev/null; then
-    yum update -y
-    yum install -y python3 python3-pip curl sqlite3
-else
-    echo "❌ 不支持的包管理器"
-    exit 1
-fi
 
 # 创建应用目录
 APP_DIR="/opt/missZhang"
