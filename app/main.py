@@ -84,6 +84,48 @@ def health() -> Tuple[str, int]:
     return "ok", 200
 
 
+@app.get("/readme")
+def readme() -> str:
+    """显示项目README文件内容"""
+    readme_path = BASE_DIR / "README.md"
+    if readme_path.exists():
+        try:
+            with open(readme_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            # 简单的Markdown到HTML转换（基础版本）
+            html_content = content.replace('\n', '<br>').replace('# ', '<h1>').replace('## ', '<h2>')
+            return f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>MissZhang - README</title>
+                <meta charset="utf-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
+                    pre {{ background: #f4f4f4; padding: 10px; overflow-x: auto; }}
+                    code {{ background: #f4f4f4; padding: 2px 4px; }}
+                </style>
+            </head>
+            <body>
+                <h1>MissZhang 项目说明</h1>
+                <div>{html_content}</div>
+                <hr>
+                <p><a href="/">返回首页</a></p>
+            </body>
+            </html>
+            """
+        except Exception as e:
+            return f"Error reading README: {str(e)}", 500
+    else:
+        return "README file not found", 404
+
+
+@app.get("/MP_verify_C1jlF7TZzN4da9le.txt")
+def wechat_verify() -> str:
+    """微信公众号JS接口安全域名验证文件"""
+    return "C1jlF7TZzN4da9le"
+
+
 @app.post("/api/contact")
 def api_contact() -> Tuple[Any, int]:
     content_type = request.headers.get("Content-Type", "").lower()

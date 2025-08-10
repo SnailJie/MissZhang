@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MissZhang - 项目说明</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .feature-list {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .feature-list ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .feature-list li {
+            margin: 8px 0;
+        }
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .tech-tag {
+            background: #3498db;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+        .back-link {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .back-link a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>MissZhang</h1>
+        <p>一个简洁、移动端友好的Python Web服务</p>
+    </div>
+
+    <h2>项目特性</h2>
+    <div class="feature-list">
+        <ul>
+            <li>响应式H5前端界面（移动端优先）</li>
+            <li>联系表单后端API（/api/contact）</li>
+            <li>SQLite数据存储</li>
+            <li>健康检查接口（/health）</li>
+            <li>生产环境就绪的Gunicorn配置</li>
+            <li>支持域名访问</li>
+        </ul>
+    </div>
+
+    <h2>技术栈</h2>
+    <div class="tech-stack">
+        <span class="tech-tag">Python 3.9+</span>
+        <span class="tech-tag">Flask</span>
+        <span class="tech-tag">SQLite</span>
+        <span class="tech-tag">Gunicorn</span>
+        <span class="tech-tag">HTML5</span>
+        <span class="tech-tag">CSS3</span>
+        <span class="tech-tag">JavaScript</span>
+    </div>
+
+    <h2>部署信息</h2>
+    <p>本应用已部署在云服务器上，使用以下配置：</p>
+    <ul>
+        <li><strong>端口：</strong>80（标准HTTP端口）</li>
+        <li><strong>进程管理：</strong>Gunicorn守护进程</li>
+        <li><strong>日志：</strong>自动记录访问和错误日志</li>
+        <li><strong>数据库：</strong>SQLite文件存储</li>
+    </ul>
+
+    <h2>API接口</h2>
+    <ul>
+        <li><code>GET /</code> - 首页</li>
+        <li><code>GET /health</code> - 健康检查</li>
+        <li><code>POST /api/contact</code> - 提交联系表单</li>
+    </ul>
+
+    <div class="back-link">
+        <a href="/">← 返回首页</a>
+    </div>
+</body>
+</html> 
