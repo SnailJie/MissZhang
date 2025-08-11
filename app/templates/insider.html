@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% set title = '内部页面' %}
+{% block content %}
+<section class="py-4">
+  <div class="container" style="max-width: 720px;">
+    <h2 class="mb-3">排班时间表</h2>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form method="get" action="/insider" class="row g-2 align-items-end mb-3">
+      <div class="col-auto">
+        <label for="week" class="form-label">选择周</label>
+        <input type="week" id="week" name="week" class="form-control" value="{{ week or '' }}" required>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">查看</button>
+      </div>
+      <div class="col-auto">
+        <a href="/" class="btn btn-link">返回首页</a>
+      </div>
+    </form>
+
+    {% if image_url %}
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>已上传：{{ week }}</span>
+          <form method="post" action="/insider" enctype="multipart/form-data" class="d-flex gap-2">
+            <input type="hidden" name="week" value="{{ week }}">
+            <input class="form-control" type="file" accept="image/png,image/jpeg,image/webp" name="image" required>
+            <button class="btn btn-warning" type="submit">替换图片</button>
+          </form>
+        </div>
+        <div class="card-body">
+          <img src="{{ image_url }}" alt="{{ week }} 排班表" class="img-fluid rounded border" style="max-height: 70vh; object-fit: contain; width: 100%;">
+        </div>
+      </div>
+    {% else %}
+      <div class="card">
+        <div class="card-body">
+          <form method="post" action="/insider" enctype="multipart/form-data">
+            <div class="mb-3">
+              <label for="weekPost" class="form-label">上传周</label>
+              <input type="week" id="weekPost" name="week" class="form-control" value="{{ week or '' }}" required>
+            </div>
+            <div class="mb-3">
+              <label for="image" class="form-label">选择排班表图片</label>
+              <input class="form-control" type="file" accept="image/png,image/jpeg,image/webp" id="image" name="image" required>
+              <div class="form-text">支持 PNG / JPG / JPEG / WEBP</div>
+            </div>
+            <button type="submit" class="btn btn-primary">提交保存</button>
+            <a href="/" class="btn btn-link">返回首页</a>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %} 

@@ -1,22 +1,22 @@
 {% extends 'base.html' %}
-{% set title = 'Miss Zhang · 让灵感落地' %}
+{% set title = '放射科的小张' %}
 {% block content %}
 <section class="hero">
   <div class="container">
-    <h1>Miss Zhang</h1>
-    <p class="tagline">一口清风，两勺阳光。让灵感在这里轻轻落地。</p>
-    <a href="#contact" class="cta">开始了解</a>
+    <h1>Dr. Zhang</h1>
+    <p class="tagline">放射科的日子，不只有CT和MR。</p>
+    <!-- <a href="#contact" class="cta">开始了解</a> -->
   </div>
 </section>
 
 <section class="features">
   <div class="container grid">
-    <div class="card">
+    <div class="card" id="ask-card" role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#secretModal">
       <div class="icon">🌈</div>
-      <h3>轻松愉快</h3>
-      <p>明快的配色和顺滑的交互，给你舒适的浏览体验。</p>
+      <h3>排班查询</h3>
+      <p>这周在哪天当班呀，提前做好准备</p>
     </div>
-    <div class="card">
+    <!-- <div class="card">
       <div class="icon">⚡</div>
       <h3>快速响应</h3>
       <p>后端采用 Python 架构，接口简洁高效，响应迅速。</p>
@@ -25,11 +25,31 @@
       <div class="icon">🧩</div>
       <h3>灵活扩展</h3>
       <p>前后端代码结构清晰，易于定制与扩展。</p>
-    </div>
+    </div> -->
   </div>
 </section>
 
-<section id="contact" class="contact">
+<!-- 验证弹窗 -->
+<div class="modal fade" id="secretModal" tabindex="-1" aria-labelledby="secretModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="secretModalLabel">请您回答如下问题：</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        <p>请问：“CT13在放射科几楼”</p>
+        <input type="text" class="form-control" id="secretAnswer" placeholder="请输入答案（）楼" autocomplete="off" />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-primary" id="secretSubmit">提交</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- <section id="contact" class="contact">
   <div class="container">
     <h2>联系我们</h2>
     <p>留下你的信息，我们会尽快与您联系。</p>
@@ -50,5 +70,5 @@
       <div id="form-toast" class="toast" role="status" aria-live="polite"></div>
     </form>
   </div>
-</section>
+</section> -->
 {% endblock %} 

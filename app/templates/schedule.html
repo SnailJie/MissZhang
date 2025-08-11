@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% set title = '我的排班' %}
+{% block content %}
+<section class="schedule">
+  <div class="container schedule-container">
+    <h1>我的排班</h1>
+    <div class="schedule-controls">
+      <label for="week-date">选择日期：</label>
+      <input type="date" id="week-date" name="week-date" />
+    </div>
+    <table class="schedule-table">
+      <thead>
+        <tr>
+          <th>星期</th>
+          <th>日期</th>
+          <th>值班时间</th>
+        </tr>
+      </thead>
+      <tbody id="schedule-body">
+        <!-- JS will fill this -->
+      </tbody>
+    </table>
+  </div>
+</section>
+<script>
+// 简单的周排班渲染逻辑
+function getWeekDates(date) {
+  const d = new Date(date);
+  const day = d.getDay() || 7;
+  d.setDate(d.getDate() - day + 1);
+  const week = [];
+  for (let i = 0; i < 7; i++) {
+    const curr = new Date(d);
+    curr.setDate(d.getDate() + i);
+    week.push(curr);
+  }
+  return week;
+}
+const duty = [
+  '白班 8:00-17:00', '夜班 17:00-次日8:00', '休息', '白班 8:00-17:00', '白班 8:00-17:00', '夜班 17:00-次日8:00', '休息'
+];
+function renderSchedule(dateStr) {
+  const week = getWeekDates(dateStr);
+  const days = ['一','二','三','四','五','六','日'];
+  const tbody = document.getElementById('schedule-body');
+  tbody.innerHTML = '';
+  week.forEach((d, i) => {
+    const ymd = d.toISOString().slice(0,10);
+    tbody.innerHTML += `<tr><td>星期${days[i]}</td><td>${ymd}</td><td>${duty[i]}</td></tr>`;
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('week-date');
+  const today = new Date().toISOString().slice(0,10);
+  input.value = today;
+  renderSchedule(today);
+  input.addEventListener('change', e => renderSchedule(e.target.value));
+});
+</script>
+{% endblock %} 

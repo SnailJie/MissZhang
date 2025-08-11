@@ -41,4 +41,37 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   form && form.addEventListener('submit', submitForm);
+
+  // Modal logic for the secret question
+  const modalElement = document.getElementById('secretModal');
+  const answerInput = document.getElementById('secretAnswer');
+  const submitBtn = document.getElementById('secretSubmit');
+
+  if (modalElement && typeof bootstrap !== 'undefined'){
+    const modal = new bootstrap.Modal(modalElement);
+
+    // Focus input when modal shown
+    modalElement.addEventListener('shown.bs.modal', () => {
+      answerInput && answerInput.focus();
+    });
+
+    function handleSecretSubmit(){
+      const value = (answerInput && answerInput.value || '').trim();
+      if (value === '2'){
+        window.location.href = '/insider';
+      }else{
+        alert('不是自己人，再见！');
+        modal.hide();
+        if (answerInput) answerInput.value = '';
+      }
+    }
+
+    submitBtn && submitBtn.addEventListener('click', handleSecretSubmit);
+    answerInput && answerInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter'){
+        e.preventDefault();
+        handleSecretSubmit();
+      }
+    });
+  }
 }); 

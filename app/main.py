@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, date
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, redirect, url_for, send_from_directory
 
 BASE_DIR: Path = Path(__file__).resolve().parents[1]
 DATA_DIR: Path = BASE_DIR / "data"
 DB_PATH: Path = DATA_DIR / "app.db"
+SCHEDULES_DIR: Path = DATA_DIR / "schedules"
+ALLOWED_IMAGE_EXTENSIONS = ("webp", "png", "jpg", "jpeg")
 
 app = Flask(
     __name__,
@@ -22,6 +25,11 @@ app = Flask(
 
 def ensure_data_dir() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def ensure_schedules_dir() -> None:
+    ensure_data_dir()
+    SCHEDULES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def init_db() -> None:
@@ -74,9 +82,99 @@ def parse_contact_payload(payload: Optional[Dict[str, Any]]) -> Tuple[Optional[C
     return ContactPayload(name=name, email=email, message=message), None
 
 
+# ---------- Schedules helpers ----------
+
+def get_current_week_str() -> str:
+    iso_year, iso_week, _ = date.today().isocalendar()
+    return f"{iso_year}-W{iso_week:02d}"
+
+
+def is_valid_week_string(week_str: str) -> bool:
+    # HTML input type="week" yields like "2025-W03"
+    return bool(re.fullmatch(r"\d{4}-W\d{2}", week_str))
+
+
+def find_existing_schedule_path(week_str: str) -> Optional[Path]:
+    for ext in ALLOWED_IMAGE_EXTENSIONS:
+        candidate = SCHEDULES_DIR / f"{week_str}.{ext}"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+# ---------- Routes ----------
+
 @app.get("/")
 def index() -> str:
     return render_template("index.html")
+
+
+@app.get("/about")
+def about():
+    return render_template("about.html")
+
+
+@app.get("/schedule")
+def schedule():
+    return render_template("schedule.html")
+
+
+# Serve saved schedule images
+@app.get("/schedules/<path:filename>")
+def serve_schedule_image(filename: str):
+    ensure_schedules_dir()
+    return send_from_directory(SCHEDULES_DIR, filename)
+
+
+# Insider page: preview or upload schedule image by week
+@app.route("/insider", methods=["GET", "POST"])
+def insider():
+    ensure_schedules_dir()
+
+    if request.method == "POST":
+        week_str = (request.form.get("week") or "").strip()
+        image_file = request.files.get("image")
+
+        if not week_str or not is_valid_week_string(week_str):
+            return render_template("insider.html", error="请选择正确的周，例如 2025-W03", week=week_str or get_current_week_str())
+
+        if not image_file or image_file.filename == "":
+            return render_template("insider.html", error="请上传排班表图片", week=week_str)
+
+        # Determine extension
+        ext = (Path(image_file.filename).suffix or "").lower().lstrip(".")
+        if ext not in ALLOWED_IMAGE_EXTENSIONS:
+            return render_template(
+                "insider.html",
+                error=f"不支持的图片格式: .{ext}，请上传: {', '.join(ALLOWED_IMAGE_EXTENSIONS)}",
+                week=week_str,
+            )
+
+        # Save as {week}.{ext}
+        # Remove any old files for this week to keep a single source of truth
+        for old_ext in ALLOWED_IMAGE_EXTENSIONS:
+            old_path = SCHEDULES_DIR / f"{week_str}.{old_ext}"
+            if old_path.exists():
+                try:
+                    old_path.unlink()
+                except Exception:
+                    pass
+        save_path = SCHEDULES_DIR / f"{week_str}.{ext}"
+        image_file.save(save_path)
+
+        return redirect(url_for("insider", week=week_str))
+
+    # GET
+    week_str = (request.args.get("week") or get_current_week_str()).strip()
+    if not is_valid_week_string(week_str):
+        week_str = get_current_week_str()
+
+    existing_path = find_existing_schedule_path(week_str)
+    image_url: Optional[str] = None
+    if existing_path:
+        image_url = url_for("serve_schedule_image", filename=existing_path.name)
+
+    return render_template("insider.html", week=week_str, image_url=image_url)
 
 
 @app.get("/health")
@@ -98,7 +196,7 @@ def readme() -> str:
             <!DOCTYPE html>
             <html>
             <head>
-                <title>MissZhang - README</title>
+                <title>Miss Zhang - README</title>
                 <meta charset="utf-8">
                 <style>
                     body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}

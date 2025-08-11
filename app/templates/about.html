@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% set title = '关于小张' %}
+{% block content %}
+<section class="about">
+  <div class="container about-container">
+    <div class="about-illustration">
+      <!-- 卡通手绘风格SVG -->
+      <svg width="160" height="180" viewBox="0 0 160 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="80" cy="160" rx="60" ry="18" fill="#e0f7fa"/>
+        <circle cx="80" cy="70" r="48" fill="#fff" stroke="#00b3ff" stroke-width="4"/>
+        <ellipse cx="80" cy="120" rx="36" ry="18" fill="#fff" stroke="#00b3ff" stroke-width="3"/>
+        <ellipse cx="80" cy="70" rx="32" ry="36" fill="#ffe0f7"/>
+        <ellipse cx="65" cy="65" rx="6" ry="8" fill="#333"/>
+        <ellipse cx="95" cy="65" rx="6" ry="8" fill="#333"/>
+        <ellipse cx="80" cy="90" rx="12" ry="6" fill="#ffb3c6"/>
+        <path d="M70 105 Q80 115 90 105" stroke="#ff7ac8" stroke-width="3" fill="none"/>
+        <rect x="60" y="120" width="40" height="18" rx="8" fill="#6be3ff"/>
+        <text x="80" y="133" text-anchor="middle" font-size="12" fill="#fff">Dr. Zhang</text>
+      </svg>
+    </div>
+    <div class="about-text">
+      <h1>关于小张</h1>
+      <p>大家好，我是<strong>小张</strong>，四川大学华西医院放射科的一名医生。我的日常不仅有CT和MR，还有修狗、养乐多和无数的灵感火花！</p>
+      <ul>
+        <li>🏥 擅长：CT、MR、X线诊断</li>
+        <li>☕ 爱好：咖啡、画画、写代码</li>
+        <li>🐱 养了一只叫“养乐多”的修狗</li>
+        <li>✨ 座右铭：影像世界，妙趣横生！</li>
+      </ul>
+    </div>
+  </div>
+</section>
+{% endblock %} 
