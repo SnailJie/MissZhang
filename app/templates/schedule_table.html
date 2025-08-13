@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+{% set title = '排班表' %}
+
+{% block head %}
+<style>
+.schedule-container {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.schedule-table th,
+.schedule-table td {
+  padding: 12px 8px;
+  text-align: center;
+  border: 1px solid #e0e0e0;
+  font-size: 14px;
+}
+
+.schedule-table th {
+  background: #6be3ff;
+  color: white;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.schedule-table tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.schedule-table tr:hover {
+  background-color: #e3f2fd;
+}
+
+.table-title {
+  background: #495057;
+  color: white;
+  padding: 12px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.filter-section {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.filter-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #6be3ff;
+  box-shadow: 0 0 0 3px rgba(107, 227, 255, 0.1);
+}
+
+.highlight {
+  background-color: #fff3cd;
+  font-weight: 600;
+}
+
+.week-info {
+  background: #e3f2fd;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #6be3ff;
+}
+
+@media (max-width: 768px) {
+  .schedule-table {
+    font-size: 12px;
+  }
+  
+  .schedule-table th,
+  .schedule-table td {
+    padding: 8px 4px;
+  }
+  
+  .filter-input {
+    max-width: 100%;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="py-4">
+  <div class="container-fluid">
+    <div class="week-info">
+      <h2 class="mb-2">排班时间表 - {{ schedule_data.week }}</h2>
+      <p class="mb-0">点击查看按钮后显示的排班表数据</p>
+    </div>
+
+    <!-- 筛选区域 -->
+    <div class="filter-section">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <label for="nameFilter" class="form-label">按姓名筛选：</label>
+          <input type="text" id="nameFilter" class="form-control filter-input" 
+                 placeholder="输入姓名进行筛选..." autocomplete="off">
+        </div>
+        <div class="col-md-6">
+          <div class="d-flex gap-2 align-items-end">
+            <button type="button" class="btn btn-outline-secondary" onclick="clearFilter()">
+              🗑️ 清除筛选
+            </button>
+            <button type="button" class="btn btn-outline-info" onclick="exportToCSV()">
+              📊 导出CSV
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 排班表 -->
+    <div class="schedule-container">
+      {% for table in schedule_data.tables %}
+      <div class="mb-4">
+        <h3 class="table-title">{{ table.title }}</h3>
+        <table class="schedule-table" data-table="{{ table.title }}">
+          <thead>
+            <tr>
+              <th>岗位</th>
+              <th>时间</th>
+              {% for date in table.dates %}
+              <th>{{ date }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for shift in table.shifts %}
+            <tr>
+              <td><strong>{{ shift.position }}</strong></td>
+              <td>{{ shift.time_range }}</td>
+              {% for date in table.dates %}
+              <td class="name-cell" data-name="{{ shift.assignments.get(date, '') }}">
+                {{ shift.assignments.get(date, '') }}
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- 返回按钮 -->
+    <div class="text-center mt-4">
+      <a href="/insider" class="btn btn-primary">
+        ← 返回内部页面
+      </a>
+    </div>
+  </div>
+</section>
+
+<script>
+// 姓名筛选功能
+document.getElementById('nameFilter').addEventListener('input', function(e) {
+  const filterValue = e.target.value.toLowerCase().trim();
+  const tables = document.querySelectorAll('.schedule-table');
+  
+  tables.forEach(table => {
+    const rows = table.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+      const nameCells = row.querySelectorAll('.name-cell');
+      let hasMatch = false;
+      
+      // 检查这一行是否有匹配的单元格
+      nameCells.forEach(cell => {
+        const name = cell.getAttribute('data-name').toLowerCase();
+        const text = cell.textContent.toLowerCase();
+        
+        if (filterValue === '' || name.includes(filterValue) || text.includes(filterValue)) {
+          cell.classList.add('highlight');
+          hasMatch = true;
+        } else {
+          cell.classList.remove('highlight');
+        }
+      });
+      
+      // 根据是否有匹配来决定显示或隐藏整行
+      if (filterValue === '' || hasMatch) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  });
+});
+
+// 清除筛选
+function clearFilter() {
+  document.getElementById('nameFilter').value = '';
+  const nameCells = document.querySelectorAll('.name-cell');
+  const rows = document.querySelectorAll('.schedule-table tbody tr');
+  
+  nameCells.forEach(cell => {
+    cell.classList.remove('highlight');
+  });
+  
+  rows.forEach(row => {
+    row.style.display = '';
+  });
+}
+
+// 导出CSV功能
+function exportToCSV() {
+  const tables = document.querySelectorAll('.schedule-table');
+  let csvContent = 'data:text/csv;charset=utf-8,';
+  
+  tables.forEach(table => {
+    const tableTitle = table.getAttribute('data-table');
+    csvContent += `\n${tableTitle}\n`;
+    
+    const rows = table.querySelectorAll('tr');
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('th, td');
+      const rowData = Array.from(cells).map(cell => {
+        const text = cell.textContent.replace(/"/g, '""');
+        return `"${text}"`;
+      });
+      csvContent += rowData.join(',') + '\n';
+    });
+  });
+  
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement('a');
+  link.setAttribute('href', encodedUri);
+  link.setAttribute('download', `排班表_${new Date().toISOString().slice(0,10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// 页面加载完成后的初始化
+document.addEventListener('DOMContentLoaded', function() {
+  // 可以在这里添加其他初始化逻辑
+  console.log('排班表页面加载完成');
+});
+</script>
+{% endblock %} 
