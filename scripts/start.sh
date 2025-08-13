@@ -39,9 +39,9 @@ fi
 
 # Small wait and health check
 sleep 1
-STATUS=$(curl -fsS "http://127.0.0.1:8000/health" || true)
+STATUS=$(curl -fsS "http://127.0.0.1:80/health" || true)
 if [ "$STATUS" = "ok" ]; then
-  echo "App started successfully: http://<server-ip>:8000"
+  echo "App started successfully: http://<server-ip>:80"
   echo "Logs: $LOG_DIR"
 else
   echo "App started, but health check failed. Check logs in $LOG_DIR" >&2
