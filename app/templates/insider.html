@@ -189,8 +189,49 @@ window.addEventListener('load', function() {
     });
   }
 
-  // 表单提交时不再需要手动处理周值，altInput 会保留原始值在隐藏输入中
+  // 表单提交时确保使用正确的周格式
+  const uploadForm = document.querySelector('form[method="post"]');
+  if (uploadForm && weekPostPicker) {
+    uploadForm.addEventListener('submit', function(e) {
+      console.log('Form submit event triggered');
+      
+      // 确保隐藏的原始输入框有正确的值
+      if (weekPostPicker.input && weekPostPicker.input.value) {
+        console.log('Original input value:', weekPostPicker.input.value);
+        
+        // 如果原始输入框有值，确保它是正确的格式
+        const weekValue = weekPostPicker.input.value;
+        if (weekValue.match(/^\d{4}-W\d{2}$/)) {
+          console.log('Week format is correct');
+          // 格式正确，不需要修改
+        } else {
+          console.log('Week format is incorrect, attempting to fix');
+          // 格式不正确，尝试从当前选择的日期生成正确的格式
+          if (weekPostPicker.selectedDates && weekPostPicker.selectedDates[0]) {
+            const date = weekPostPicker.selectedDates[0];
+            const year = date.getFullYear();
+            const week = getWeekNumber(date);
+            const correctedValue = `${year}-W${week.toString().padStart(2, '0')}`;
+            weekPostPicker.input.value = correctedValue;
+            console.log('Corrected week value:', correctedValue);
+          } else {
+            console.log('No selected dates available');
+          }
+        }
+      } else {
+        console.log('No original input value found');
+      }
+    });
+  }
 
+  // 获取周数的辅助函数
+  function getWeekNumber(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  }
 });
 </script>
 

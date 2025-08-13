@@ -340,8 +340,15 @@ def insider():
         week_str = (request.form.get("week") or "").strip()
         image_file = request.files.get("image")
 
+        # 添加调试信息
+        print(f"DEBUG: Received week_str: '{week_str}'")
+        print(f"DEBUG: week_str type: {type(week_str)}")
+        print(f"DEBUG: week_str length: {len(week_str)}")
+        print(f"DEBUG: is_valid_week_string result: {is_valid_week_string(week_str)}")
+
         if not week_str or not is_valid_week_string(week_str):
-            return render_template("insider.html", error="请选择正确的周，例如 2025-W03", week=week_str or get_current_week_str())
+            error_msg = f"请选择正确的周，例如 2025-W03。当前值: '{week_str}'"
+            return render_template("insider.html", error=error_msg, week=week_str or get_current_week_str())
 
         if not image_file or image_file.filename == "":
             return render_template("insider.html", error="请上传排班表图片", week=week_str)
