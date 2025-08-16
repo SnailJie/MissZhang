@@ -8,5 +8,4 @@ run/
 .env.*
 .data/
 data/app.db
-data/*
 .DS_Store 
