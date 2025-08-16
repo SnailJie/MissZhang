@@ -33,12 +33,18 @@ if [ -f /etc/os-release ]; then
     . /etc/os-release
     OS=$NAME
     VER=$VERSION_ID
+    ID=$ID
+    ID_LIKE=$ID_LIKE
 else
     OS=$(uname -s)
     VER=$(uname -r)
+    ID="unknown"
+    ID_LIKE="unknown"
 fi
 
 echo "操作系统: $OS $VER"
+echo "系统 ID: $ID"
+echo "系统类型: $ID_LIKE"
 
 # 检测 Web 服务器
 if command -v nginx &> /dev/null; then
@@ -86,9 +92,24 @@ elif command -v nslookup &> /dev/null; then
     DNS_TOOL="nslookup"
 else
     echo -e "${RED}❌ 未找到 DNS 查询工具 (dig, host, nslookup)${NC}"
-    echo "请安装 bind-utils 包:"
-    echo "CentOS/RHEL: sudo yum install -y bind-utils"
-    echo "Ubuntu/Debian: sudo apt install -y dnsutils"
+    
+    # 根据系统类型提供不同的解决方案
+    if [[ "$ID" == "alinux" ]] || [[ "$OS" == *"Alibaba Cloud Linux"* ]]; then
+        echo "阿里云 Linux 系统缺少 DNS 工具，建议运行:"
+        echo "sudo bash scripts/fix_alinux_dns.sh"
+    elif [[ "$OS" == *"CentOS"* ]] || [[ "$OS" == *"Red Hat"* ]] || [[ "$OS" == *"Rocky"* ]] || [[ "$OS" == *"Alma"* ]] || \
+         [[ "$ID" == "centos" ]] || [[ "$ID" == "rhel" ]] || [[ "$ID" == "rocky" ]] || [[ "$ID" == "almalinux" ]] || \
+         [[ "$ID_LIKE" == *"rhel"* ]] || [[ "$ID_LIKE" == *"centos"* ]]; then
+        echo "CentOS/RHEL 兼容系统缺少 DNS 工具，建议运行:"
+        echo "sudo bash scripts/fix_centos_dns.sh"
+    elif [[ "$OS" == *"Ubuntu"* ]] || [[ "$OS" == *"Debian"* ]] || [[ "$ID" == "ubuntu" ]] || [[ "$ID" == "debian" ]]; then
+        echo "Ubuntu/Debian 系统缺少 DNS 工具，请运行:"
+        echo "sudo apt install -y dnsutils"
+    else
+        echo "请安装 bind-utils 包:"
+        echo "CentOS/RHEL: sudo yum install -y bind-utils"
+        echo "Ubuntu/Debian: sudo apt install -y dnsutils"
+    fi
     exit 1
 fi
 
@@ -123,32 +144,62 @@ echo "域名解析检查: 通过"
 echo ""
 echo -e "${YELLOW}📦 安装 certbot...${NC}"
 
-case $OS in
-    *"Ubuntu"*|*"Debian"*)
-        echo "检测到 Ubuntu/Debian 系统"
-        apt update
-        apt install -y certbot python3-certbot-nginx python3-certbot-apache
-        ;;
-    *"CentOS"*|*"Red Hat"*|*"Rocky"*|*"Alma"*)
-        echo "检测到 CentOS/RHEL 系统"
-        if command -v dnf &> /dev/null; then
-            dnf install -y certbot python3-certbot-nginx python3-certbot-apache
-        else
-            yum install -y certbot python3-certbot-nginx python3-certbot-apache
+# 检测系统类型并安装 certbot
+if [[ "$OS" == *"Ubuntu"* ]] || [[ "$OS" == *"Debian"* ]] || [[ "$ID" == "ubuntu" ]] || [[ "$ID" == "debian" ]]; then
+    echo "检测到 Ubuntu/Debian 系统"
+    apt update
+    apt install -y certbot python3-certbot-nginx python3-certbot-apache
+elif [[ "$ID" == "alinux" ]] || [[ "$OS" == *"Alibaba Cloud Linux"* ]]; then
+    echo "检测到阿里云 Linux 系统"
+    echo "建议使用专用修复脚本: sudo bash scripts/fix_alinux_certbot.sh"
+    echo "或者尝试标准安装方法..."
+    
+    # 尝试安装 EPEL 仓库
+    if command -v dnf &> /dev/null; then
+        if ! dnf repolist | grep -q "epel"; then
+            echo "安装 EPEL 仓库..."
+            dnf install -y epel-release
         fi
-        ;;
-    *)
-        echo "检测到其他系统，尝试使用 snap 安装"
-        if command -v snap &> /dev/null; then
-            snap install --classic certbot
-            ln -sf /snap/bin/certbot /usr/bin/certbot
-        else
-            echo -e "${RED}❌ 无法自动安装 certbot${NC}"
-            echo "请手动安装 certbot: https://certbot.eff.org/"
-            exit 1
+        echo "使用 dnf 安装 certbot..."
+        dnf install -y certbot python3-certbot-nginx python3-certbot-apache
+    elif command -v yum &> /dev/null; then
+        if ! yum repolist | grep -q "epel"; then
+            echo "安装 EPEL 仓库..."
+            yum install -y epel-release
         fi
-        ;;
-esac
+        echo "使用 yum 安装 certbot..."
+        yum install -y certbot python3-certbot-nginx python3-certbot-apache
+    else
+        echo -e "${RED}❌ 未找到包管理器${NC}"
+        exit 1
+    fi
+    
+    # 如果安装失败，建议使用修复脚本
+    if [ $? -ne 0 ]; then
+        echo -e "${YELLOW}⚠️  标准安装失败，建议使用阿里云专用修复脚本${NC}"
+        echo "运行: sudo bash scripts/fix_alinux_certbot.sh"
+        exit 1
+    fi
+elif [[ "$OS" == *"CentOS"* ]] || [[ "$OS" == *"Red Hat"* ]] || [[ "$OS" == *"Rocky"* ]] || [[ "$OS" == *"Alma"* ]] || \
+     [[ "$ID" == "centos" ]] || [[ "$ID" == "rhel" ]] || [[ "$ID" == "rocky" ]] || [[ "$ID" == "almalinux" ]] || \
+     [[ "$ID_LIKE" == *"rhel"* ]] || [[ "$ID_LIKE" == *"centos"* ]]; then
+    echo "检测到 CentOS/RHEL 兼容系统"
+    if command -v dnf &> /dev/null; then
+        dnf install -y certbot python3-certbot-nginx python3-certbot-apache
+    else
+        yum install -y certbot python3-certbot-nginx python3-certbot-apache
+    fi
+else
+    echo "检测到其他系统，尝试使用 snap 安装"
+    if command -v snap &> /dev/null; then
+        snap install --classic certbot
+        ln -sf /snap/bin/certbot /usr/bin/certbot
+    else
+        echo -e "${RED}❌ 无法自动安装 certbot${NC}"
+        echo "请手动安装 certbot: https://certbot.eff.org/"
+        exit 1
+    fi
+fi
 
 echo -e "${GREEN}✅ certbot 安装完成${NC}"
 
@@ -375,6 +426,14 @@ echo "2. 确保服务器防火墙开放 80 和 443 端口"
 echo "3. 在微信公众平台更新授权回调域名"
 echo "4. 运行 'bash scripts/status.sh' 检查配置"
 echo "5. 运行 'sudo bash scripts/deploy.sh' 部署应用"
+echo ""
+# 阿里云系统特殊提示
+if [[ "$ID" == "alinux" ]] || [[ "$OS" == *"Alibaba Cloud Linux"* ]]; then
+    echo -e "${BLUE}🔧 阿里云 Linux 系统特殊提示:${NC}"
+    echo "1. 如果遇到 DNS 工具问题，运行: sudo bash scripts/fix_alinux_dns.sh"
+    echo "2. 如果遇到 certbot 问题，运行: sudo bash scripts/fix_alinux_certbot.sh"
+    echo "3. 使用快速修复选择器: bash scripts/quick_fix_selector.sh"
+fi
 echo ""
 echo -e "${BLUE}🔗 访问地址:${NC}"
 echo "HTTP:  http://$DOMAIN_NAME (自动重定向到 HTTPS)"

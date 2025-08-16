@@ -30,7 +30,22 @@ if command -v certbot &> /dev/null; then
     echo -e "${GREEN}✅ certbot 已安装: $CERTBOT_VERSION${NC}"
 else
     echo -e "${RED}❌ certbot 未安装${NC}"
-    echo "请运行: sudo bash scripts/ssl_setup.sh"
+    
+    # 检测系统类型并提供相应的解决方案
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        if [[ "$ID" == "alinux" ]] || [[ "$OS" == *"Alibaba Cloud Linux"* ]]; then
+            echo "阿里云 Linux 系统缺少 certbot，建议运行:"
+            echo "sudo bash scripts/fix_alinux_certbot.sh"
+        elif [[ "$OS" == *"CentOS"* ]] || [[ "$OS" == *"Red Hat"* ]] || [[ "$ID" == "centos" ]] || [[ "$ID" == "rhel" ]]; then
+            echo "CentOS/RHEL 系统缺少 certbot，建议运行:"
+            echo "sudo bash scripts/fix_centos_dns.sh"
+        else
+            echo "请运行: sudo bash scripts/ssl_setup.sh"
+        fi
+    else
+        echo "请运行: sudo bash scripts/ssl_setup.sh"
+    fi
     exit 1
 fi
 
@@ -359,3 +374,15 @@ echo -e "${BLUE}📚 更多信息:${NC}"
 echo "- 查看详细指南: docs/ssl-setup-guide.md"
 echo "- 运行配置脚本: sudo bash scripts/ssl_setup.sh"
 echo "- 检查部署状态: bash scripts/status.sh"
+
+# 阿里云系统特殊提示
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    if [[ "$ID" == "alinux" ]] || [[ "$OS" == *"Alibaba Cloud Linux"* ]]; then
+        echo ""
+        echo -e "${BLUE}🔧 阿里云 Linux 系统特殊提示:${NC}"
+        echo "- DNS 工具修复: sudo bash scripts/fix_alinux_dns.sh"
+        echo "- certbot 修复: sudo bash scripts/fix_alinux_certbot.sh"
+        echo "- 快速修复选择器: bash scripts/quick_fix_selector.sh"
+    fi
+fi

@@ -39,8 +39,24 @@ echo "操作系统: $OS $VER"
 if [[ "$OS" != *"CentOS"* ]] && [[ "$OS" != *"Red Hat"* ]] && [[ "$OS" != *"Rocky"* ]] && [[ "$OS" != *"Alma"* ]] && [[ "$OS" != *"Alibaba Cloud Linux"* ]] && [[ "$OS" != *"Amazon Linux"* ]]; then
     echo -e "${YELLOW}⚠️  此脚本专为 CentOS/RHEL 兼容系统设计${NC}"
     echo "当前系统: $OS"
-    echo "建议使用系统自带的包管理器安装 DNS 工具"
+    
+    # 根据系统类型提供不同的建议
+    if [[ "$OS" == *"Ubuntu"* ]] || [[ "$OS" == *"Debian"* ]]; then
+        echo "Ubuntu/Debian 系统建议使用: sudo apt install -y dnsutils"
+    elif [[ "$OS" == *"Alibaba Cloud Linux"* ]] || [[ "$ID" == "alinux" ]]; then
+        echo "阿里云 Linux 系统建议使用: sudo bash scripts/fix_alinux_dns.sh"
+    else
+        echo "建议使用系统自带的包管理器安装 DNS 工具"
+    fi
     exit 1
+fi
+
+# 阿里云系统特殊提示
+if [[ "$OS" == *"Alibaba Cloud Linux"* ]] || [[ "$ID" == "alinux" ]]; then
+    echo -e "${BLUE}🔧 检测到阿里云 Linux 系统${NC}"
+    echo "建议优先使用专用修复脚本: sudo bash scripts/fix_alinux_dns.sh"
+    echo "或者继续使用此通用脚本..."
+    echo ""
 fi
 
 echo -e "${GREEN}✅ 系统兼容性检查通过${NC}"
@@ -121,3 +137,15 @@ echo -e "${BLUE}📚 相关脚本:${NC}"
 echo "- DNS 工具完整安装: sudo bash scripts/install_dns_tools.sh"
 echo "- SSL 配置: sudo bash scripts/ssl_setup.sh"
 echo "- 状态检查: bash scripts/ssl_status.sh"
+
+# 阿里云系统特殊提示
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    if [[ "$ID" == "alinux" ]] || [[ "$OS" == *"Alibaba Cloud Linux"* ]]; then
+        echo ""
+        echo -e "${BLUE}🔧 阿里云 Linux 系统特殊提示:${NC}"
+        echo "- 如果遇到问题，建议使用专用修复脚本: sudo bash scripts/fix_alinux_dns.sh"
+        echo "- 使用快速修复选择器: bash scripts/quick_fix_selector.sh"
+        echo "- 检查系统兼容性: bash scripts/test_system_detection.sh"
+    fi
+fi

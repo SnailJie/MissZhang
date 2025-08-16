@@ -40,16 +40,29 @@ echo ""
 echo -e "${BLUE}🔍 检查系统兼容性...${NC}"
 
 COMPATIBLE=false
+ALINUX_SYSTEM=false
 
 # 检查各种标识符
 if [[ "$OS" == *"CentOS"* ]] || [[ "$OS" == *"Red Hat"* ]] || [[ "$OS" == *"Rocky"* ]] || [[ "$OS" == *"Alma"* ]] || [[ "$OS" == *"Alibaba Cloud Linux"* ]] || [[ "$OS" == *"Amazon Linux"* ]]; then
     COMPATIBLE=true
     echo -e "${GREEN}✅ 通过操作系统名称匹配${NC}"
+    
+    # 检查是否为阿里云系统
+    if [[ "$OS" == *"Alibaba Cloud Linux"* ]] || [[ "$ID" == "alinux" ]]; then
+        ALINUX_SYSTEM=true
+        echo -e "${BLUE}🔧 检测到阿里云 Linux 系统${NC}"
+    fi
 fi
 
 if [[ "$ID" == "centos" ]] || [[ "$ID" == "rhel" ]] || [[ "$ID" == "rocky" ]] || [[ "$ID" == "almalinux" ]] || [[ "$ID" == "alinux" ]] || [[ "$ID" == "amzn" ]]; then
     COMPATIBLE=true
     echo -e "${GREEN}✅ 通过系统 ID 匹配${NC}"
+    
+    # 检查是否为阿里云系统
+    if [[ "$ID" == "alinux" ]]; then
+        ALINUX_SYSTEM=true
+        echo -e "${BLUE}🔧 检测到阿里云 Linux 系统${NC}"
+    fi
 fi
 
 if [[ "$ID_LIKE" == *"rhel"* ]] || [[ "$ID_LIKE" == *"centos"* ]]; then
@@ -127,11 +140,32 @@ if [ "$COMPATIBLE" = true ] && [ "$PKG_MANAGER" != "none" ]; then
     echo -e "${GREEN}🎉 系统完全兼容！可以使用 DNS 工具安装脚本${NC}"
     echo ""
     echo -e "${BLUE}💡 建议操作:${NC}"
-    if [ ${#DNS_TOOLS[@]} -eq 0 ]; then
-        echo "sudo bash scripts/install_dns_tools.sh"
+    
+    # 阿里云系统特殊建议
+    if [ "$ALINUX_SYSTEM" = true ]; then
+        echo -e "${BLUE}🔧 阿里云 Linux 系统专用建议:${NC}"
+        if [ ${#DNS_TOOLS[@]} -eq 0 ]; then
+            echo "sudo bash scripts/fix_alinux_dns.sh"
+        else
+            echo "sudo bash scripts/fix_alinux_dns.sh"
+        fi
+        echo "sudo bash scripts/fix_alinux_certbot.sh"
     else
-        echo "sudo bash scripts/fix_centos_dns.sh"
+        if [ ${#DNS_TOOLS[@]} -eq 0 ]; then
+            echo "sudo bash scripts/install_dns_tools.sh"
+        else
+            echo "sudo bash scripts/fix_centos_dns.sh"
+        fi
     fi
 else
     echo -e "${YELLOW}⚠️  系统不完全兼容，建议手动安装 DNS 工具${NC}"
+fi
+
+# 阿里云系统特殊提示
+if [ "$ALINUX_SYSTEM" = true ]; then
+    echo ""
+    echo -e "${BLUE}🔧 阿里云 Linux 系统特殊提示:${NC}"
+    echo "- 使用快速修复选择器: bash scripts/quick_fix_selector.sh"
+    echo "- 检查 SSL 系统检测: bash scripts/test_ssl_system_detection.sh"
+    echo "- 查看 SSL 配置指南: docs/ssl-setup-guide.md"
 fi

@@ -57,9 +57,11 @@ sudo bash scripts/ssl_setup.sh
 - 配置自动续期
 - 更新项目配置
 
-**注意**: 如果系统缺少 DNS 工具，请先运行相应的修复脚本：
+**注意**: 如果系统缺少 DNS 工具或 certbot，请先运行相应的修复脚本：
 
-- **阿里云 Linux 系统**: `sudo bash scripts/fix_alinux_dns.sh`
+- **阿里云 Linux 系统**:
+  - DNS 工具修复: `sudo bash scripts/fix_alinux_dns.sh`
+  - certbot 安装修复: `sudo bash scripts/fix_alinux_certbot.sh`
 - **CentOS/RHEL 系统**: `sudo bash scripts/fix_centos_dns.sh`
 - **通用安装**: `sudo bash scripts/install_dns_tools.sh`
 

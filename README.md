@@ -127,6 +127,40 @@ def protected_route():
 3. 配置反向代理（Nginx）
 4. 使用环境变量管理敏感配置
 
+### SSL 证书配置
+
+#### 自动配置（推荐）
+```bash
+# 智能检测系统并配置 SSL
+bash scripts/quick_fix_selector.sh
+
+# 或者手动配置 SSL
+sudo bash scripts/ssl_setup.sh
+```
+
+#### 系统特定配置
+```bash
+# 阿里云 Linux 系统
+sudo bash scripts/fix_alinux_dns.sh      # 修复 DNS 工具
+sudo bash scripts/fix_alinux_certbot.sh  # 修复 certbot 安装
+sudo bash scripts/ssl_setup.sh           # 配置 SSL 证书
+
+# CentOS/RHEL 系统
+sudo bash scripts/fix_centos_dns.sh      # 修复 DNS 工具
+sudo bash scripts/ssl_setup.sh           # 配置 SSL 证书
+
+# Ubuntu/Debian 系统
+sudo apt install -y dnsutils certbot python3-certbot-nginx python3-certbot-apache
+sudo bash scripts/ssl_setup.sh           # 配置 SSL 证书
+```
+
+### 系统兼容性
+
+- ✅ **阿里云 Linux**: 完全支持，提供专用修复脚本
+- ✅ **CentOS/RHEL**: 完全支持，兼容 Rocky Linux、AlmaLinux 等
+- ✅ **Ubuntu/Debian**: 完全支持
+- ⚠️ **其他系统**: 有限支持，建议手动安装依赖
+
 ### Docker 部署
 
 ```dockerfile
@@ -142,6 +176,41 @@ CMD ["python", "run.py"]
 ## 许可证
 
 MIT License
+
+## 📚 脚本说明
+
+### 核心脚本
+- `scripts/ssl_setup.sh` - SSL 证书自动配置
+- `scripts/ssl_status.sh` - SSL 状态检查
+- `scripts/deploy.sh` - 应用部署脚本
+
+### 系统修复脚本
+- `scripts/fix_alinux_dns.sh` - 阿里云 Linux DNS 工具修复
+- `scripts/fix_alinux_certbot.sh` - 阿里云 Linux certbot 修复
+- `scripts/fix_centos_dns.sh` - CentOS/RHEL DNS 工具修复
+- `scripts/install_dns_tools.sh` - 通用 DNS 工具安装
+
+### 测试和诊断脚本
+- `scripts/test_system_detection.sh` - 系统兼容性测试
+- `scripts/test_ssl_system_detection.sh` - SSL 系统检测测试
+- `scripts/quick_fix_selector.sh` - 智能修复方案选择器
+
+### 使用建议
+1. 首次使用：运行 `bash scripts/quick_fix_selector.sh` 自动检测和修复
+2. 遇到问题：查看相关脚本的帮助信息或运行测试脚本
+3. 系统特定：优先使用针对当前系统的专用修复脚本
+
+## 🔧 故障排除
+
+### 常见问题
+- **DNS 工具缺失**: 运行相应的系统修复脚本
+- **certbot 安装失败**: 使用系统专用修复脚本
+- **SSL 配置问题**: 检查域名解析和 Web 服务器配置
+
+### 获取帮助
+- 查看 `docs/ssl-setup-guide.md` 详细配置指南
+- 查看 `docs/alinux-adaptation-summary.md` 阿里云系统适配说明
+- 运行测试脚本诊断问题
 
 ## 贡献
 
