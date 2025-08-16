@@ -20,6 +20,17 @@ mkdir -p "$APP_DIR"
 if [ -f "app/main.py" ]; then
     echo "📋 复制项目文件..."
     cp -r . "$APP_DIR/"
+    
+    # 检查环境配置
+    if [ ! -f ".env" ]; then
+        echo "⚠️  警告: 未找到 .env 配置文件"
+        echo "请配置微信参数后再部署"
+        echo "cp env.example .env"
+        echo "编辑 .env 文件填入真实的微信配置"
+        exit 1
+    fi
+    
+    echo "✅ 环境配置文件检查通过"
 else
     echo "⚠️  请确保在项目根目录运行此脚本"
     exit 1

@@ -33,6 +33,12 @@ pip install -r requirements.txt
 
 ## 4. 创建配置文件
 
+### 方法1：使用配置脚本（推荐）
+```bash
+bash scripts/setup_env.sh
+```
+
+### 方法2：手动配置
 复制 `env.example` 为 `.env` 并修改：
 
 ```bash
@@ -71,6 +77,18 @@ A: 检查以下几点：
 - 是否开启了网页授权功能
 - 回调地址是否配置正确
 - 域名是否在授权域名列表中
+
+### Q: 如何检查系统状态？
+A: 运行状态检查脚本：
+```bash
+bash scripts/status.sh
+```
+
+### Q: 如何重新配置环境变量？
+A: 运行配置脚本：
+```bash
+bash scripts/setup_env.sh
+```
 
 ### Q: 应用无法启动？
 A: 检查：

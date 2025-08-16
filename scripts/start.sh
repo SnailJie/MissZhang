@@ -26,6 +26,22 @@ source "$VENV_DIR/bin/activate"
 pip install -U pip wheel
 pip install -r "$REQ_FILE"
 
+# Check for environment configuration
+if [ ! -f "$PROJECT_ROOT/.env" ]; then
+  echo "⚠️  警告: 未找到 .env 配置文件"
+  echo "请运行以下命令配置环境变量："
+  echo "bash scripts/setup_env.sh"
+  echo ""
+  echo "或者手动复制并编辑："
+  echo "cp env.example .env"
+  echo ""
+  echo "继续启动应用（使用默认配置）..."
+else
+  echo "✅ 环境配置文件已找到"
+  # 加载环境变量
+  export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+fi
+
 # Start Gunicorn (daemonized via gunicorn.conf.py)
 GUNICORN_BIN="$VENV_DIR/bin/gunicorn"
 
