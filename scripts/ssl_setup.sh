@@ -75,10 +75,44 @@ fi
 # 检查域名解析
 echo ""
 echo -e "${YELLOW}🔍 检查域名解析...${NC}"
-if ! nslookup "$DOMAIN_NAME" &> /dev/null; then
-    echo -e "${RED}❌ 域名 $DOMAIN_NAME 无法解析${NC}"
-    echo "请确保域名已正确解析到服务器 IP"
+
+# 检测可用的 DNS 查询工具
+DNS_TOOL=""
+if command -v dig &> /dev/null; then
+    DNS_TOOL="dig"
+elif command -v host &> /dev/null; then
+    DNS_TOOL="host"
+elif command -v nslookup &> /dev/null; then
+    DNS_TOOL="nslookup"
+else
+    echo -e "${RED}❌ 未找到 DNS 查询工具 (dig, host, nslookup)${NC}"
+    echo "请安装 bind-utils 包:"
+    echo "CentOS/RHEL: sudo yum install -y bind-utils"
+    echo "Ubuntu/Debian: sudo apt install -y dnsutils"
     exit 1
+fi
+
+echo "使用 DNS 查询工具: $DNS_TOOL"
+
+# 使用可用的工具检查域名解析
+if [ "$DNS_TOOL" = "dig" ]; then
+    if ! dig +short "$DOMAIN_NAME" &> /dev/null || [ -z "$(dig +short "$DOMAIN_NAME")" ]; then
+        echo -e "${RED}❌ 域名 $DOMAIN_NAME 无法解析${NC}"
+        echo "请确保域名已正确解析到服务器 IP"
+        exit 1
+    fi
+elif [ "$DNS_TOOL" = "host" ]; then
+    if ! host "$DOMAIN_NAME" &> /dev/null; then
+        echo -e "${RED}❌ 域名 $DOMAIN_NAME 无法解析${NC}"
+        echo "请确保域名已正确解析到服务器 IP"
+        exit 1
+    fi
+elif [ "$DNS_TOOL" = "nslookup" ]; then
+    if ! nslookup "$DOMAIN_NAME" &> /dev/null; then
+        echo -e "${RED}❌ 域名 $DOMAIN_NAME 无法解析${NC}"
+        echo "请确保域名已正确解析到服务器 IP"
+        exit 1
+    fi
 fi
 
 SERVER_IP=$(curl -s ifconfig.me)

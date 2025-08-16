@@ -142,28 +142,85 @@ if [ -f ".env" ]; then
         echo "检测到域名: $DOMAIN"
         
         # 检查域名解析
-        if nslookup "$DOMAIN" &> /dev/null; then
-            echo -e "${GREEN}✅ 域名解析正常${NC}"
-            
-            # 获取解析的 IP
-            RESOLVED_IP=$(nslookup "$DOMAIN" | grep "Address:" | tail -1 | awk '{print $2}')
-            if [ -n "$RESOLVED_IP" ]; then
-                echo "解析到 IP: $RESOLVED_IP"
-                
-                # 获取服务器公网 IP
-                SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || echo "unknown")
-                if [ "$SERVER_IP" != "unknown" ]; then
-                    if [ "$RESOLVED_IP" = "$SERVER_IP" ]; then
-                        echo -e "${GREEN}✅ 域名正确解析到服务器${NC}"
-                    else
-                        echo -e "${YELLOW}⚠️  域名解析的 IP 与服务器 IP 不匹配${NC}"
-                        echo "域名解析 IP: $RESOLVED_IP"
-                        echo "服务器公网 IP: $SERVER_IP"
+        # 检测可用的 DNS 查询工具
+        DNS_TOOL=""
+        if command -v dig &> /dev/null; then
+            DNS_TOOL="dig"
+        elif command -v host &> /dev/null; then
+            DNS_TOOL="host"
+        elif command -v nslookup &> /dev/null; then
+            DNS_TOOL="nslookup"
+        fi
+        
+        if [ -n "$DNS_TOOL" ]; then
+            if [ "$DNS_TOOL" = "dig" ]; then
+                RESOLVED_IP=$(dig +short "$DOMAIN" | head -1)
+                if [ -n "$RESOLVED_IP" ]; then
+                    echo -e "${GREEN}✅ 域名解析正常${NC}"
+                    echo "解析到 IP: $RESOLVED_IP"
+                    
+                    # 获取服务器公网 IP
+                    SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || echo "unknown")
+                    if [ "$SERVER_IP" != "unknown" ]; then
+                        if [ "$RESOLVED_IP" = "$SERVER_IP" ]; then
+                            echo -e "${GREEN}✅ 域名正确解析到服务器${NC}"
+                        else
+                            echo -e "${YELLOW}⚠️  域名解析的 IP 与服务器 IP 不匹配${NC}"
+                            echo "域名解析 IP: $RESOLVED_IP"
+                            echo "服务器公网 IP: $SERVER_IP"
+                        fi
                     fi
+                else
+                    echo -e "${RED}❌ 域名解析失败${NC}"
+                fi
+            elif [ "$DNS_TOOL" = "host" ]; then
+                RESOLVED_IP=$(host "$DOMAIN" | grep "has address" | awk '{print $NF}' | head -1)
+                if [ -n "$RESOLVED_IP" ]; then
+                    echo -e "${GREEN}✅ 域名解析正常${NC}"
+                    echo "解析到 IP: $RESOLVED_IP"
+                    
+                    # 获取服务器公网 IP
+                    SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || echo "unknown")
+                    if [ "$SERVER_IP" != "unknown" ]; then
+                        if [ "$RESOLVED_IP" = "$SERVER_IP" ]; then
+                            echo -e "${GREEN}✅ 域名正确解析到服务器${NC}"
+                        else
+                            echo -e "${YELLOW}⚠️  域名解析的 IP 与服务器 IP 不匹配${NC}"
+                            echo "域名解析 IP: $RESOLVED_IP"
+                            echo "服务器公网 IP: $SERVER_IP"
+                        fi
+                    fi
+                else
+                    echo -e "${RED}❌ 域名解析失败${NC}"
+                fi
+            elif [ "$DNS_TOOL" = "nslookup" ]; then
+                if nslookup "$DOMAIN" &> /dev/null; then
+                    echo -e "${GREEN}✅ 域名解析正常${NC}"
+                    
+                    # 获取解析的 IP
+                    RESOLVED_IP=$(nslookup "$DOMAIN" | grep "Address:" | tail -1 | awk '{print $2}')
+                    if [ -n "$RESOLVED_IP" ]; then
+                        echo "解析到 IP: $RESOLVED_IP"
+                        
+                        # 获取服务器公网 IP
+                        SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || echo "unknown")
+                        if [ "$SERVER_IP" != "unknown" ]; then
+                            if [ "$RESOLVED_IP" = "$SERVER_IP" ]; then
+                                echo -e "${GREEN}✅ 域名正确解析到服务器${NC}"
+                            else
+                                echo -e "${YELLOW}⚠️  域名解析的 IP 与服务器 IP 不匹配${NC}"
+                                echo "域名解析 IP: $RESOLVED_IP"
+                                echo "服务器公网 IP: $SERVER_IP"
+                            fi
+                        fi
+                    fi
+                else
+                    echo -e "${RED}❌ 域名解析失败${NC}"
                 fi
             fi
         else
-            echo -e "${RED}❌ 域名解析失败${NC}"
+            echo -e "${YELLOW}⚠️  未找到 DNS 查询工具${NC}"
+            echo "请安装 bind-utils 包: sudo yum install -y bind-utils"
         fi
     else
         echo -e "${YELLOW}⚠️  未在 .env 文件中找到域名配置${NC}"

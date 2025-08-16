@@ -27,6 +27,11 @@
 - 服务器可以访问外网
 - 域名可以正常解析
 
+### 4. 系统工具要求
+- 已安装 DNS 查询工具（dig, host, nslookup 等）
+- CentOS/RHEL 系统：`sudo yum install -y bind-utils`
+- Ubuntu/Debian 系统：`sudo apt install -y dnsutils`
+
 ## 🚀 快速配置（推荐）
 
 ### 使用自动化脚本
@@ -35,10 +40,13 @@
 # 1. 确保有 root 权限
 sudo su
 
-# 2. 运行 SSL 配置脚本
+# 2. 安装 DNS 工具（CentOS 系统）
+sudo bash scripts/install_dns_tools.sh
+
+# 3. 运行 SSL 配置脚本
 sudo bash scripts/ssl_setup.sh
 
-# 3. 按提示输入域名和邮箱
+# 4. 按提示输入域名和邮箱
 ```
 
 脚本会自动完成：
@@ -48,6 +56,25 @@ sudo bash scripts/ssl_setup.sh
 - 申请 SSL 证书
 - 配置自动续期
 - 更新项目配置
+
+**注意**: 如果系统缺少 DNS 工具，请先运行 `sudo bash scripts/install_dns_tools.sh`
+
+### CentOS 系统特殊说明
+
+CentOS 系统默认可能没有安装 DNS 查询工具，需要先安装：
+
+```bash
+# 安装 bind-utils 包（包含 dig, host, nslookup）
+sudo yum install -y bind-utils
+
+# 或者使用 dnf（CentOS 8+）
+sudo dnf install -y bind-utils
+
+# 验证安装
+dig -v
+host -V
+nslookup -version
+```
 
 ## 📝 手动配置步骤
 
