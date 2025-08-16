@@ -59,18 +59,30 @@ sudo bash scripts/ssl_setup.sh
 
 **注意**: 如果系统缺少 DNS 工具，请先运行 `sudo bash scripts/install_dns_tools.sh`
 
-### CentOS 系统特殊说明
+### CentOS/RHEL 兼容系统特殊说明
 
-CentOS 系统默认可能没有安装 DNS 查询工具，需要先安装：
+以下系统默认可能没有安装 DNS 查询工具，需要先安装：
 
+#### CentOS/RHEL 系统
 ```bash
 # 安装 bind-utils 包（包含 dig, host, nslookup）
 sudo yum install -y bind-utils
 
 # 或者使用 dnf（CentOS 8+）
 sudo dnf install -y bind-utils
+```
 
-# 验证安装
+#### 阿里云 Linux 系统
+```bash
+# 阿里云 Linux 3 基于 CentOS 7
+sudo yum install -y bind-utils
+
+# 阿里云 Linux 2 基于 CentOS 7
+sudo yum install -y bind-utils
+```
+
+#### 验证安装
+```bash
 dig -v
 host -V
 nslookup -version

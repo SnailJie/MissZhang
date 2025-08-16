@@ -12,8 +12,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo "🔧 CentOS DNS 工具安装脚本"
-echo "=========================="
+echo "🔧 CentOS/RHEL 兼容系统 DNS 工具安装脚本"
+echo "=========================================="
 
 # 检查是否为 root 用户
 if [ "$EUID" -ne 0 ]; then
@@ -35,13 +35,15 @@ fi
 
 echo "操作系统: $OS $VER"
 
-# 检查是否为 CentOS/RHEL 系统
-if [[ "$OS" != *"CentOS"* ]] && [[ "$OS" != *"Red Hat"* ]] && [[ "$OS" != *"Rocky"* ]] && [[ "$OS" != *"Alma"* ]]; then
-    echo -e "${YELLOW}⚠️  此脚本专为 CentOS/RHEL 系统设计${NC}"
+# 检查是否为 CentOS/RHEL 兼容系统
+if [[ "$OS" != *"CentOS"* ]] && [[ "$OS" != *"Red Hat"* ]] && [[ "$OS" != *"Rocky"* ]] && [[ "$OS" != *"Alma"* ]] && [[ "$OS" != *"Alibaba Cloud Linux"* ]] && [[ "$OS" != *"Amazon Linux"* ]]; then
+    echo -e "${YELLOW}⚠️  此脚本专为 CentOS/RHEL 兼容系统设计${NC}"
     echo "当前系统: $OS"
     echo "建议使用系统自带的包管理器安装 DNS 工具"
     exit 1
 fi
+
+echo -e "${GREEN}✅ 系统兼容性检查通过${NC}"
 
 # 检查当前可用的 DNS 工具
 echo ""
