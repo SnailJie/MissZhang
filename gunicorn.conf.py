@@ -14,7 +14,8 @@ LOGS_DIR.mkdir(parents=True, exist_ok=True)
 RUN_DIR.mkdir(parents=True, exist_ok=True)
 
 # Networking - 从环境变量获取配置，默认使用8000端口（nginx反向代理）
-bind = f"{os.getenv('PRODUCTION_HOST', '0.0.0.0')}:{os.getenv('PRODUCTION_PORT', '8000')}"
+# bind = f"{os.getenv('PRODUCTION_HOST', '0.0.0.0')}:{os.getenv('PRODUCTION_PORT', '8000')}"
+bind = "0.0.0.0:8000"
 
 # Processes
 workers = max(2, multiprocessing.cpu_count() // 2 or 1)
