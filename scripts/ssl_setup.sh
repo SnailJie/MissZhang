@@ -62,6 +62,20 @@ else
     exit 1
 fi
 
+# 检测 Apache 系统类型
+if [ "$WEB_SERVER" = "apache2" ] || [ "$WEB_SERVER" = "httpd" ]; then
+    if [ -d "/etc/apache2/sites-available" ]; then
+        APACHE_TYPE="debian"
+        echo -e "${BLUE}📁 Apache 类型: Ubuntu/Debian 风格${NC}"
+    elif [ -d "/etc/httpd/conf.d" ]; then
+        APACHE_TYPE="rhel"
+        echo -e "${BLUE}📁 Apache 类型: CentOS/RHEL/阿里云风格${NC}"
+    else
+        echo -e "${YELLOW}⚠️  无法确定 Apache 配置目录结构${NC}"
+        echo "将使用默认配置路径"
+    fi
+fi
+
 # 获取用户输入
 echo ""
 echo -e "${BLUE}请输入域名信息:${NC}"
@@ -264,8 +278,41 @@ EOF
     echo -e "${GREEN}✅ Nginx 配置创建完成${NC}"
     
 elif [ "$WEB_SERVER" = "apache2" ] || [ "$WEB_SERVER" = "httpd" ]; then
-    # Apache 配置
-    APACHE_CONF="/etc/apache2/sites-available/$DOMAIN_NAME.conf"
+    # Apache 配置 - 根据系统类型选择配置目录
+    if [ "$APACHE_TYPE" = "debian" ]; then
+        # Ubuntu/Debian 风格
+        APACHE_CONF="/etc/apache2/sites-available/$DOMAIN_NAME.conf"
+        APACHE_ENABLE_CMD="a2ensite"
+        APACHE_RELOAD_CMD="systemctl reload apache2"
+        APACHE_TEST_CMD="apache2ctl configtest"
+        echo -e "${BLUE}📁 使用 Ubuntu/Debian 风格配置: $APACHE_CONF${NC}"
+    elif [ "$APACHE_TYPE" = "rhel" ]; then
+        # CentOS/RHEL/阿里云风格
+        APACHE_CONF="/etc/httpd/conf.d/$DOMAIN_NAME.conf"
+        APACHE_ENABLE_CMD="echo '配置文件已创建，请重启 httpd 服务'"
+        APACHE_RELOAD_CMD="systemctl reload httpd"
+        APACHE_TEST_CMD="httpd -t"
+        echo -e "${BLUE}📁 使用 CentOS/RHEL/阿里云风格配置: $APACHE_CONF${NC}"
+    else
+        # 自动检测
+        if [ -d "/etc/apache2/sites-available" ]; then
+            APACHE_CONF="/etc/apache2/sites-available/$DOMAIN_NAME.conf"
+            APACHE_ENABLE_CMD="a2ensite"
+            APACHE_RELOAD_CMD="systemctl reload apache2"
+            APACHE_TEST_CMD="apache2ctl configtest"
+            echo -e "${BLUE}📁 自动检测到 Ubuntu/Debian 风格配置: $APACHE_CONF${NC}"
+        elif [ -d "/etc/httpd/conf.d" ]; then
+            APACHE_CONF="/etc/httpd/conf.d/$DOMAIN_NAME.conf"
+            APACHE_ENABLE_CMD="echo '配置文件已创建，请重启 httpd 服务'"
+            APACHE_RELOAD_CMD="systemctl reload httpd"
+            APACHE_TEST_CMD="httpd -t"
+            echo -e "${BLUE}📁 自动检测到 CentOS/RHEL/阿里云风格配置: $APACHE_CONF${NC}"
+        else
+            echo -e "${RED}❌ 无法确定 Apache 配置目录${NC}"
+            echo "请手动创建配置文件"
+            exit 1
+        fi
+    fi
     
     cat > "$APACHE_CONF" << EOF
 <VirtualHost *:80>
@@ -307,17 +354,38 @@ elif [ "$WEB_SERVER" = "apache2" ] || [ "$WEB_SERVER" = "httpd" ]; then
 EOF
 
     # 启用必要的模块
-    a2enmod ssl
-    a2enmod proxy
-    a2enmod proxy_http
-    a2enmod rewrite
-    
-    # 启用站点
-    a2ensite "$DOMAIN_NAME.conf"
+    if [ "$APACHE_TYPE" = "debian" ]; then
+        echo -e "${BLUE}🔧 启用 Apache 模块 (Ubuntu/Debian 风格)...${NC}"
+        a2enmod ssl
+        a2enmod proxy
+        a2enmod proxy_http
+        a2enmod rewrite
+        
+        # 启用站点
+        echo -e "${BLUE}🔧 启用站点配置...${NC}"
+        a2ensite "$DOMAIN_NAME.conf"
+    else
+        echo -e "${YELLOW}⚠️  阿里云/CentOS 系统：请手动启用必要的模块${NC}"
+        echo "在 /etc/httpd/conf/httpd.conf 中确保以下模块已启用："
+        echo "  LoadModule ssl_module modules/mod_ssl.so"
+        echo "  LoadModule proxy_module modules/mod_proxy.so"
+        echo "  LoadModule proxy_http_module modules/mod_proxy_http.so"
+        echo "  LoadModule rewrite_module modules/mod_rewrite.so"
+        echo ""
+        echo "或者运行以下命令检查模块状态："
+        echo "  httpd -M | grep -E '(ssl|proxy|rewrite)'"
+    fi
     
     # 测试配置
-    apache2ctl configtest
-    systemctl reload apache2
+    eval "$APACHE_TEST_CMD"
+    if [ $? -eq 0 ]; then
+        eval "$APACHE_RELOAD_CMD"
+        echo -e "${GREEN}✅ Apache 配置测试通过并已重载${NC}"
+    else
+        echo -e "${RED}❌ Apache 配置测试失败${NC}"
+        echo "请检查配置文件语法"
+        exit 1
+    fi
     
     echo -e "${GREEN}✅ Apache 配置创建完成${NC}"
 fi
@@ -329,7 +397,13 @@ echo -e "${YELLOW}🔐 申请 Let's Encrypt SSL 证书...${NC}"
 if [ "$WEB_SERVER" = "nginx" ]; then
     certbot --nginx -d "$DOMAIN_NAME" -d "www.$DOMAIN_NAME" --email "$EMAIL_ADDRESS" --agree-tos --non-interactive
 elif [ "$WEB_SERVER" = "apache2" ] || [ "$WEB_SERVER" = "httpd" ]; then
-    certbot --apache -d "$DOMAIN_NAME" -d "www.$DOMAIN_NAME" --email "$EMAIL_ADDRESS" --agree-tos --non-interactive
+    # 根据系统类型选择正确的 certbot 命令
+    if [ -d "/etc/apache2/sites-available" ]; then
+        certbot --apache -d "$DOMAIN_NAME" -d "www.$DOMAIN_NAME" --email "$EMAIL_ADDRESS" --agree-tos --non-interactive
+    else
+        # 阿里云/CentOS 系统使用 httpd
+        certbot --apache -d "$DOMAIN_NAME" -d "www.$DOMAIN_NAME" --email "$EMAIL_ADDRESS" --agree-tos --non-interactive
+    fi
 fi
 
 if [ $? -eq 0 ]; then
