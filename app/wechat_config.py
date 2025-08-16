@@ -7,54 +7,56 @@ import hashlib
 from typing import Optional, Dict, List
 
 class WeChatConfig:
-    """微信配置类 - 适用于已认证公众号"""
+    """微信配置管理类"""
     
-    # 微信公众号配置
-    APP_ID = os.getenv('WECHAT_APP_ID', 'your_app_id_here')
-    APP_SECRET = os.getenv('WECHAT_APP_SECRET', 'your_app_secret_here')
+    def __init__(self):
+        # 微信公众号配置
+        self.app_id = os.getenv('WECHAT_APP_ID', 'your_app_id_here')
+        self.app_secret = os.getenv('WECHAT_APP_SECRET', '')
+        
+        # 服务器配置
+        self.token = os.getenv('WECHAT_TOKEN', 'mytoken123')  # 添加Token配置
+        self.encoding_aes_key = os.getenv('WECHAT_ENCODING_AES_KEY', '')
+        
+        # 登录配置
+        self.login_keyword = os.getenv('WECHAT_LOGIN_KEYWORD', '登录')
+        self.session_timeout = int(os.getenv('WECHAT_SESSION_TIMEOUT', '3600'))
+        
+        # 接口URL配置
+        self.base_url = 'https://api.weixin.qq.com'
+        self.access_token_url = f'{self.base_url}/cgi-bin/token'
+        self.user_info_url = f'{self.base_url}/cgi-bin/user/info'
+        self.custom_message_url = f'{self.base_url}/cgi-bin/message/custom/send'
+        
+        # 消息加解密方式
+        self.encrypt_mode = os.getenv('WECHAT_ENCRYPT_MODE', 'plain')  # plain, compatible, safe
+        
+    @property
+    def is_configured(self) -> bool:
+        """检查配置是否完整"""
+        return bool(self.app_id and self.app_secret and self.app_id != 'your_app_id_here')
     
-    # 微信API接口 - 已认证公众号可用
-    ACCESS_TOKEN_URL = 'https://api.weixin.qq.com/cgi-bin/token'
-    USER_INFO_URL = 'https://api.weixin.qq.com/cgi-bin/user/info'
-    FOLLOWERS_URL = 'https://api.weixin.qq.com/cgi-bin/user/get'
-    CUSTOM_MESSAGE_URL = 'https://api.weixin.qq.com/cgi-bin/message/custom/send'
+    @property
+    def server_config_summary(self) -> dict:
+        """获取服务器配置摘要"""
+        return {
+            'token': self.token,
+            'encoding_aes_key': self.encoding_aes_key,
+            'encrypt_mode': self.encrypt_mode,
+            'callback_url': '/wechat/message'
+        }
     
-    # 网页授权相关（仅用于获取openid，不用于获取用户信息）
-    OAUTH2_URL = 'https://open.weixin.qq.com/connect/oauth2/authorize'
-    OAUTH2_ACCESS_TOKEN_URL = 'https://api.weixin.qq.com/sns/oauth2/access_token'
+    def get_access_token_url(self) -> str:
+        """获取access_token接口URL"""
+        return f'{self.access_token_url}?grant_type=client_credential&appid={self.app_id}&secret={self.app_secret}'
     
-    # 用户身份识别相关
-    LOGIN_KEYWORD = os.getenv('WECHAT_LOGIN_KEYWORD', '登录')
-    SESSION_TIMEOUT = int(os.getenv('WECHAT_SESSION_TIMEOUT', '3600'))  # 1小时
+    def get_user_info_url(self, access_token: str, openid: str) -> str:
+        """获取用户信息接口URL"""
+        return f'{self.user_info_url}?access_token={access_token}&openid={openid}&lang=zh_CN'
     
-    @classmethod
-    def is_configured(cls) -> bool:
-        """检查微信配置是否完整"""
-        return (cls.APP_ID != 'your_app_id_here' and 
-                cls.APP_SECRET != 'your_app_secret_here')
-    
-    @classmethod
-    def get_access_token_url(cls) -> str:
-        """获取access_token的完整URL"""
-        return f"{cls.ACCESS_TOKEN_URL}?grant_type=client_credential&appid={cls.APP_ID}&secret={cls.APP_SECRET}"
-    
-    @classmethod
-    def get_user_info_url(cls, access_token: str, openid: str) -> str:
-        """获取用户基本信息的完整URL"""
-        return f"{cls.USER_INFO_URL}?access_token={access_token}&openid={openid}&lang=zh_CN"
-    
-    @classmethod
-    def get_followers_url(cls, access_token: str, next_openid: str = '') -> str:
-        """获取关注者列表的完整URL"""
-        url = f"{cls.FOLLOWERS_URL}?access_token={access_token}"
-        if next_openid:
-            url += f"&next_openid={next_openid}"
-        return url
-    
-    @classmethod
-    def get_custom_message_url(cls, access_token: str) -> str:
-        """发送客服消息的完整URL"""
-        return f"{cls.CUSTOM_MESSAGE_URL}?access_token={access_token}"
+    def get_custom_message_url(self, access_token: str) -> str:
+        """获取客服消息接口URL"""
+        return f'{self.custom_message_url}?access_token={access_token}'
     
     @classmethod
     def generate_session_id(cls, openid: str, timestamp: int = None) -> str:
