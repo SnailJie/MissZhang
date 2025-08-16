@@ -5,12 +5,13 @@ import requests
 import json
 import time
 from typing import Dict, List, Optional, Tuple
-from .wechat_config import WeChatConfig
+from app.wechat_config import WeChatConfig
 
 class WeChatService:
     """微信服务类"""
     
     def __init__(self):
+        self.config = WeChatConfig()
         self.access_token = None
         self.token_expires_at = 0
     
@@ -24,7 +25,7 @@ class WeChatService:
         
         # 获取新的access_token
         try:
-            response = requests.get(WeChatConfig.get_access_token_url())
+            response = requests.get(self.config.get_access_token_url())
             data = response.json()
             
             if 'access_token' in data:
@@ -47,7 +48,7 @@ class WeChatService:
             return None
         
         try:
-            response = requests.get(WeChatConfig.get_user_info_url(access_token, openid))
+            response = requests.get(self.config.get_user_info_url(access_token, openid))
             data = response.json()
             
             if 'errcode' not in data:
@@ -67,7 +68,7 @@ class WeChatService:
             return None
         
         try:
-            response = requests.get(WeChatConfig.get_followers_url(access_token, next_openid))
+            response = requests.get(self.config.get_followers_url(access_token, next_openid))
             data = response.json()
             
             if 'data' in data:
@@ -106,7 +107,7 @@ class WeChatService:
             return False
         
         try:
-            url = WeChatConfig.get_custom_message_url(access_token)
+            url = self.config.get_custom_message_url(access_token)
             data = {
                 "touser": openid,
                 "msgtype": "text",
@@ -141,7 +142,7 @@ class WeChatService:
     def create_login_session(self, openid: str) -> Tuple[str, int]:
         """创建登录会话"""
         timestamp = int(time.time())
-        session_id = WeChatConfig.generate_session_id(openid, timestamp)
+        session_id = self.config.generate_session_id(openid, timestamp)
         return session_id, timestamp
     
     def verify_login_session(self, session_id: str, openid: str, timestamp: int) -> bool:
@@ -151,12 +152,12 @@ class WeChatService:
             return False
         
         # 验证会话ID
-        return WeChatConfig.verify_session_id(session_id, openid, timestamp)
+        return self.config.verify_session_id(session_id, openid, timestamp)
     
     def is_session_expired(self, timestamp: int) -> bool:
         """检查会话是否过期"""
         current_time = time.time()
-        return (current_time - timestamp) > WeChatConfig.SESSION_TIMEOUT
+        return (current_time - timestamp) > self.config.session_timeout
     
     def get_user_profile(self, openid: str) -> Optional[Dict]:
         """获取用户资料信息"""

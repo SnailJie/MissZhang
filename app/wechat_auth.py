@@ -10,14 +10,15 @@ class WeChatAuth:
     """微信认证处理类"""
     
     def __init__(self):
-        self.app_id = WeChatConfig.APP_ID
-        self.app_secret = WeChatConfig.APP_SECRET
+        self.config = WeChatConfig()
+        self.app_id = self.config.app_id
+        self.app_secret = self.config.app_secret
     
     def get_authorization_url(self, redirect_uri: str = None, state: str = None) -> str:
         """生成微信网页授权URL"""
         if not redirect_uri:
             # 默认回调地址
-            redirect_uri = WeChatConfig.REDIRECT_URI
+            redirect_uri = self.config.redirect_uri if hasattr(self.config, 'redirect_uri') else None
         
         params = {
             'appid': self.app_id,
@@ -45,7 +46,7 @@ class WeChatAuth:
                 'secret': self.app_secret
             }
             
-            response = requests.get(WeChatConfig.ACCESS_TOKEN_URL, params=params, timeout=10)
+            response = requests.get(self.config.access_token_url, params=params, timeout=10)
             data = response.json()
             
             if 'access_token' in data:
@@ -84,7 +85,7 @@ class WeChatAuth:
                 'lang': 'zh_CN'
             }
             
-            user_response = requests.get(WeChatConfig.USER_INFO_URL, params=user_params, timeout=10)
+            user_response = requests.get(self.config.user_info_url, params=user_params, timeout=10)
             user_data = user_response.json()
             
             if 'openid' in user_data:

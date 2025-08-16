@@ -20,24 +20,13 @@ except ImportError:
     pass
 
 # 导入微信认证模块
-try:
-    from app.wechat_auth import WeChatAuth
-    from app.wechat_config import WeChatConfig
-    from app.wechat_service import WeChatService
-    from app.user_identity import user_identity_manager
-except ImportError:
-    # 如果从项目根目录运行，使用相对导入
-    from wechat_auth import WeChatAuth
-    from wechat_config import WeChatConfig
-    from wechat_service import WeChatService
-    from user_identity import user_identity_manager
+from app.wechat_auth import WeChatAuth
+from app.wechat_config import WeChatConfig
+from app.wechat_service import WeChatService
+from app.user_identity import user_identity_manager
 
 # 导入排班表数据结构
-try:
-    from app.schedule_data import get_mock_schedule_data, get_schedule_data, ScheduleData
-except ImportError:
-    # 如果从项目根目录运行，使用相对导入
-    from schedule_data import get_mock_schedule_data, get_schedule_data, ScheduleData
+from app.schedule_data import get_mock_schedule_data, get_schedule_data, ScheduleData
 
 # 排班表数据结构定义
 @dataclass
@@ -257,6 +246,7 @@ app = Flask(
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'your_secret_key_here')
 
 # Initialize WeChat services
+wechat_config = WeChatConfig()
 wechat_auth = WeChatAuth()
 wechat_service = WeChatService()
 
@@ -301,9 +291,10 @@ def init_db() -> None:
         )
         
         # 用户档案表 - 关联到用户ID
+        conn.execute("DROP TABLE IF EXISTS user_profiles")
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS user_profiles (
+            CREATE TABLE user_profiles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
@@ -355,19 +346,21 @@ def parse_contact_payload(payload: Optional[Dict[str, Any]]) -> Tuple[Optional[C
     return ContactPayload(name=name, email=email, message=message), None
 
 
+# ---------- Main Routes ----------
+
 # ---------- WeChat Authentication Routes ----------
 
 @app.route("/wechat/login")
 def wechat_login():
     """微信登录入口 - 新版本"""
     # 检查是否已配置微信
-    if not WeChatConfig.is_configured():
+    if not wechat_config.is_configured:
         return render_template("wechat_login.html", 
-                             login_keyword=WeChatConfig.LOGIN_KEYWORD,
+                             login_keyword=wechat_config.login_keyword,
                              error="微信配置未完成")
     
     return render_template("wechat_login.html", 
-                         login_keyword=WeChatConfig.LOGIN_KEYWORD)
+                         login_keyword=wechat_config.login_keyword)
 
 
 @app.route("/wechat/callback")
@@ -474,7 +467,7 @@ def wechat_message():
         # 简单的XML解析（生产环境建议使用xml.etree.ElementTree）
         if '<MsgType><![CDATA[text]]></MsgType>' in xml_data:
             # 文本消息
-            if f'<Content><![CDATA[{WeChatConfig.LOGIN_KEYWORD}]]></Content>' in xml_data:
+            if f'<Content><![CDATA[{wechat_config.login_keyword}]]></Content>' in xml_data:
                 # 提取openid
                 openid_start = xml_data.find('<FromUserName><![CDATA[') + 20
                 openid_end = xml_data.find(']]></FromUserName>')
@@ -495,7 +488,7 @@ def wechat_message():
                             # 返回成功响应
                             return f"""<xml>
                                 <ToUserName><![CDATA[{openid}]]></ToUserName>
-                                <FromUserName><![CDATA[{WeChatConfig.APP_ID}]]></FromUserName>
+                                <FromUserName><![CDATA[{wechat_config.app_id}]]></FromUserName>
                                 <CreateTime>{int(time.time())}</CreateTime>
                                 <MsgType><![CDATA[text]]></MsgType>
                                 <Content><![CDATA[登录成功！请返回网页刷新页面。]]></Content>
@@ -504,10 +497,10 @@ def wechat_message():
         # 默认回复
         return f"""<xml>
             <ToUserName><![CDATA[{request.form.get('FromUserName', '')}]]></ToUserName>
-            <FromUserName><![CDATA[{WeChatConfig.APP_ID}]]></FromUserName>
+            <FromUserName><![CDATA[{wechat_config.app_id}]]></FromUserName>
             <CreateTime>{int(time.time())}</CreateTime>
             <MsgType><![CDATA[text]]></MsgType>
-            <Content><![CDATA[请发送"{WeChatConfig.LOGIN_KEYWORD}"进行登录]]></Content>
+            <Content><![CDATA[请发送"{wechat_config.login_keyword}"进行登录]]></Content>
         </xml>"""
         
     except Exception as e:

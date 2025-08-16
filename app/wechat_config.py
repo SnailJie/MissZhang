@@ -28,6 +28,9 @@ class WeChatConfig:
         self.user_info_url = f'{self.base_url}/cgi-bin/user/info'
         self.custom_message_url = f'{self.base_url}/cgi-bin/message/custom/send'
         
+        # 网页授权配置
+        self.redirect_uri = os.getenv('WECHAT_REDIRECT_URI', '')
+        
         # 消息加解密方式
         self.encrypt_mode = os.getenv('WECHAT_ENCRYPT_MODE', 'plain')  # plain, compatible, safe
         
@@ -58,12 +61,22 @@ class WeChatConfig:
         """获取客服消息接口URL"""
         return f'{self.custom_message_url}?access_token={access_token}'
     
+    def get_followers_url(self, access_token: str, next_openid: str = '') -> str:
+        """获取关注者列表接口URL"""
+        base_url = f'{self.base_url}/cgi-bin/user/get'
+        url = f'{base_url}?access_token={access_token}'
+        if next_openid:
+            url += f'&next_openid={next_openid}'
+        return url
+    
     @classmethod
     def generate_session_id(cls, openid: str, timestamp: int = None) -> str:
         """生成会话ID"""
         if timestamp is None:
             timestamp = int(time.time())
-        data = f"{openid}_{timestamp}_{cls.APP_SECRET}"
+        # 使用环境变量获取app_secret，因为这是类方法
+        app_secret = os.getenv('WECHAT_APP_SECRET', '')
+        data = f"{openid}_{timestamp}_{app_secret}"
         return hashlib.md5(data.encode()).hexdigest()
     
     @classmethod
@@ -76,4 +89,6 @@ class WeChatConfig:
     def is_session_expired(cls, timestamp: int) -> bool:
         """检查会话是否过期"""
         current_time = int(time.time())
-        return (current_time - timestamp) > cls.SESSION_TIMEOUT
+        # 使用环境变量获取session_timeout，因为这是类方法
+        session_timeout = int(os.getenv('WECHAT_SESSION_TIMEOUT', '3600'))
+        return (current_time - timestamp) > session_timeout
