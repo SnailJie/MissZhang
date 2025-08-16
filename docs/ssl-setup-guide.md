@@ -57,7 +57,11 @@ sudo bash scripts/ssl_setup.sh
 - 配置自动续期
 - 更新项目配置
 
-**注意**: 如果系统缺少 DNS 工具，请先运行 `sudo bash scripts/install_dns_tools.sh`
+**注意**: 如果系统缺少 DNS 工具，请先运行相应的修复脚本：
+
+- **阿里云 Linux 系统**: `sudo bash scripts/fix_alinux_dns.sh`
+- **CentOS/RHEL 系统**: `sudo bash scripts/fix_centos_dns.sh`
+- **通用安装**: `sudo bash scripts/install_dns_tools.sh`
 
 ### CentOS/RHEL 兼容系统特殊说明
 
@@ -79,6 +83,9 @@ sudo yum install -y bind-utils
 
 # 阿里云 Linux 2 基于 CentOS 7
 sudo yum install -y bind-utils
+
+# 或者使用专用修复脚本（推荐）
+sudo bash scripts/fix_alinux_dns.sh
 ```
 
 #### 验证安装
