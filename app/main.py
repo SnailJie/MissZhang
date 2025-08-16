@@ -4,6 +4,7 @@ import json
 import sqlite3
 import re
 import os
+import time
 from dataclasses import dataclass
 from datetime import datetime, date
 from pathlib import Path
@@ -22,10 +23,14 @@ except ImportError:
 try:
     from app.wechat_auth import WeChatAuth
     from app.wechat_config import WeChatConfig
+    from app.wechat_service import WeChatService
+    from app.user_identity import user_identity_manager
 except ImportError:
     # 如果从项目根目录运行，使用相对导入
     from wechat_auth import WeChatAuth
     from wechat_config import WeChatConfig
+    from wechat_service import WeChatService
+    from user_identity import user_identity_manager
 
 # 导入排班表数据结构
 try:
@@ -251,8 +256,9 @@ app = Flask(
 # Configure Flask session
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'your_secret_key_here')
 
-# Initialize WeChatAuth
+# Initialize WeChat services
 wechat_auth = WeChatAuth()
+wechat_service = WeChatService()
 
 
 def ensure_data_dir() -> None:
@@ -353,10 +359,15 @@ def parse_contact_payload(payload: Optional[Dict[str, Any]]) -> Tuple[Optional[C
 
 @app.route("/wechat/login")
 def wechat_login():
-    """微信登录入口"""
-    # 生成微信授权URL
-    auth_url = wechat_auth.get_authorization_url()
-    return redirect(auth_url)
+    """微信登录入口 - 新版本"""
+    # 检查是否已配置微信
+    if not WeChatConfig.is_configured():
+        return render_template("wechat_login.html", 
+                             login_keyword=WeChatConfig.LOGIN_KEYWORD,
+                             error="微信配置未完成")
+    
+    return render_template("wechat_login.html", 
+                         login_keyword=WeChatConfig.LOGIN_KEYWORD)
 
 
 @app.route("/wechat/callback")
@@ -394,6 +405,114 @@ def wechat_logout():
     """微信登出"""
     session.clear()
     return redirect(url_for('index'))
+
+
+@app.route("/wechat/check_login_status", methods=["POST"])
+def wechat_check_login_status():
+    """检查用户登录状态"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "message": "请求数据不能为空"})
+        
+        # 这里应该实现检查逻辑，比如检查是否有用户发送了登录关键词
+        # 暂时返回未登录状态
+        return jsonify({
+            "success": False, 
+            "message": "请向公众号发送关键词进行登录"
+        })
+        
+    except Exception as e:
+        print(f"检查登录状态失败: {e}")
+        return jsonify({"success": False, "message": "检查失败"})
+
+
+@app.route("/wechat/manual_login", methods=["POST"])
+def wechat_manual_login():
+    """手动登录接口（开发测试用）"""
+    try:
+        data = request.get_json()
+        if not data or not data.get('openid'):
+            return jsonify({"success": False, "message": "请提供OpenID"})
+        
+        openid = data['openid'].strip()
+        
+        # 验证用户是否为公众号关注者
+        if not wechat_service.verify_user_is_follower(openid):
+            return jsonify({"success": False, "message": "该用户未关注公众号"})
+        
+        # 创建登录会话
+        session_id = user_identity_manager.create_login_session(openid)
+        if not session_id:
+            return jsonify({"success": False, "message": "创建会话失败"})
+        
+        # 获取用户信息
+        user_info = wechat_service.get_user_profile(openid)
+        
+        # 设置会话
+        session['session_id'] = session_id
+        session['openid'] = openid
+        
+        return jsonify({
+            "success": True,
+            "session_id": session_id,
+            "user_info": user_info
+        })
+        
+    except Exception as e:
+        print(f"手动登录失败: {e}")
+        return jsonify({"success": False, "message": "登录失败"})
+
+
+@app.route("/wechat/message", methods=["POST"])
+def wechat_message():
+    """处理微信公众号消息"""
+    try:
+        # 解析XML消息
+        xml_data = request.data.decode('utf-8')
+        
+        # 简单的XML解析（生产环境建议使用xml.etree.ElementTree）
+        if '<MsgType><![CDATA[text]]></MsgType>' in xml_data:
+            # 文本消息
+            if f'<Content><![CDATA[{WeChatConfig.LOGIN_KEYWORD}]]></Content>' in xml_data:
+                # 提取openid
+                openid_start = xml_data.find('<FromUserName><![CDATA[') + 20
+                openid_end = xml_data.find(']]></FromUserName>')
+                if openid_start > 19 and openid_end > openid_start:
+                    openid = xml_data[openid_start:openid_end]
+                    
+                    # 验证用户是否为公众号关注者
+                    if wechat_service.verify_user_is_follower(openid):
+                        # 创建登录会话
+                        session_id = user_identity_manager.create_login_session(openid)
+                        if session_id:
+                            # 发送登录成功消息
+                            wechat_service.send_custom_message(
+                                openid, 
+                                f"登录成功！您的会话ID是：{session_id}"
+                            )
+                            
+                            # 返回成功响应
+                            return f"""<xml>
+                                <ToUserName><![CDATA[{openid}]]></ToUserName>
+                                <FromUserName><![CDATA[{WeChatConfig.APP_ID}]]></FromUserName>
+                                <CreateTime>{int(time.time())}</CreateTime>
+                                <MsgType><![CDATA[text]]></MsgType>
+                                <Content><![CDATA[登录成功！请返回网页刷新页面。]]></Content>
+                            </xml>"""
+        
+        # 默认回复
+        return f"""<xml>
+            <ToUserName><![CDATA[{request.form.get('FromUserName', '')}]]></ToUserName>
+            <FromUserName><![CDATA[{WeChatConfig.APP_ID}]]></FromUserName>
+            <CreateTime>{int(time.time())}</CreateTime>
+            <MsgType><![CDATA[text]]></MsgType>
+            <Content><![CDATA[请发送"{WeChatConfig.LOGIN_KEYWORD}"进行登录]]></Content>
+        </xml>"""
+        
+    except Exception as e:
+        print(f"处理微信消息失败: {e}")
+        return "success"
 
 
 def save_or_update_user(user_info: Dict[str, Any]) -> int:
@@ -448,45 +567,147 @@ def save_or_update_user(user_info: Dict[str, Any]) -> int:
         raise
 
 
-def get_current_user() -> Optional[Dict[str, Any]]:
-    """获取当前登录用户信息"""
-    if 'user_id' not in session:
-        return None
-    
+def save_or_update_user_from_openid(openid: str, user_info: Dict[str, Any]) -> int:
+    """根据openid保存或更新用户信息，返回用户ID"""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            # 检查用户是否已存在
+            cursor = conn.execute(
+                "SELECT id FROM users WHERE openid = ?",
+                (openid,)
+            )
+            existing_user = cursor.fetchone()
+            
+            if existing_user:
+                # 更新现有用户
+                user_id = existing_user[0]
+                conn.execute(
+                    """
+                    UPDATE users 
+                    SET nickname = ?, avatar_url = ?, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        user_info.get('nickname', ''),
+                        user_info.get('headimgurl', ''),
+                        datetime.utcnow().isoformat(),
+                        user_id
+                    )
+                )
+            else:
+                # 创建新用户
+                cursor = conn.execute(
+                    """
+                    INSERT INTO users (openid, nickname, avatar_url, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        openid,
+                        user_info.get('nickname', ''),
+                        user_info.get('headimgurl', ''),
+                        datetime.utcnow().isoformat(),
+                        datetime.utcnow().isoformat()
+                    )
+                )
+                user_id = cursor.lastrowid
+            
+            conn.commit()
+            return user_id
+            
+    except Exception as e:
+        print(f"保存用户信息失败: {e}")
+        raise
+
+
+def get_user_profile_by_user_id(user_id: int) -> Dict[str, str]:
+    """根据用户ID获取用户档案信息"""
     try:
         with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.execute(
-                """
-                SELECT u.id, u.openid, u.nickname, u.avatar_url, u.created_at,
-                       up.name, up.hospital, up.department
-                FROM users u
-                LEFT JOIN user_profiles up ON u.id = up.user_id
-                WHERE u.id = ?
-                """,
-                (session['user_id'],)
+                "SELECT name, hospital, department FROM user_profiles WHERE user_id = ?",
+                (user_id,)
             )
             row = cursor.fetchone()
             
             if row:
                 return {
-                    "id": row[0],
-                    "openid": row[1],
-                    "nickname": row[2],
-                    "avatar_url": row[3],
-                    "created_at": row[4],
-                    "name": row[5],
-                    "hospital": row[6],
-                    "department": row[7]
+                    "name": row[0],
+                    "hospital": row[1],
+                    "department": row[2]
                 }
             else:
-                # 用户不存在，清除会话
-                session.clear()
-                return None
+                return {}
                 
     except Exception as e:
-        print(f"获取用户信息失败: {e}")
-        session.clear()
-        return None
+        print(f"获取用户档案失败: {e}")
+        return {}
+
+
+def get_current_user() -> Optional[Dict[str, Any]]:
+    """获取当前登录用户信息 - 新版本"""
+    # 优先检查新的会话系统
+    if 'session_id' in session and 'openid' in session:
+        session_id = session['session_id']
+        openid = session['openid']
+        
+        # 验证会话
+        user_info = user_identity_manager.verify_session(session_id)
+        if user_info:
+            # 从数据库获取或创建用户记录
+            user_id = save_or_update_user_from_openid(openid, user_info)
+            
+            # 获取用户档案信息
+            profile_info = get_user_profile_by_user_id(user_id)
+            
+            return {
+                "id": user_id,
+                "openid": openid,
+                "nickname": user_info.get('nickname', ''),
+                "avatar_url": user_info.get('headimgurl', ''),
+                "created_at": user_info.get('subscribe_time', ''),
+                "name": profile_info.get('name', ''),
+                "hospital": profile_info.get('hospital', ''),
+                "department": profile_info.get('department', '')
+            }
+    
+    # 兼容旧版本的session系统
+    if 'user_id' in session:
+        try:
+            with sqlite3.connect(DB_PATH) as conn:
+                cursor = conn.execute(
+                    """
+                    SELECT u.id, u.openid, u.nickname, u.avatar_url, u.created_at,
+                           up.name, up.hospital, up.department
+                    FROM users u
+                    LEFT JOIN user_profiles up ON u.id = up.user_id
+                    WHERE u.id = ?
+                    """,
+                    (session['user_id'],)
+                )
+                row = cursor.fetchone()
+                
+                if row:
+                    return {
+                        "id": row[0],
+                        "openid": row[1],
+                        "nickname": row[2],
+                        "avatar_url": row[3],
+                        "created_at": row[4],
+                        "name": row[5],
+                        "hospital": row[6],
+                        "department": row[7]
+                    }
+                else:
+                    # 用户不存在，清除会话
+                    session.clear()
+                    return None
+                    
+        except Exception as e:
+            print(f"获取用户信息失败: {e}")
+            session.clear()
+            return None
+    
+    return None
 
 
 def require_login(f):
