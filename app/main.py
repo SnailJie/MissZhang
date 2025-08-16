@@ -3,15 +3,36 @@ from __future__ import annotations
 import json
 import sqlite3
 import re
+import os
 from dataclasses import dataclass
 from datetime import datetime, date
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, List
 
-from flask import Flask, jsonify, render_template, request, redirect, url_for, send_from_directory
+from flask import Flask, jsonify, render_template, request, redirect, url_for, send_from_directory, session
+
+# 加载环境变量
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+# 导入微信认证模块
+try:
+    from app.wechat_auth import WeChatAuth
+    from app.wechat_config import WeChatConfig
+except ImportError:
+    # 如果从项目根目录运行，使用相对导入
+    from wechat_auth import WeChatAuth
+    from wechat_config import WeChatConfig
 
 # 导入排班表数据结构
-from app.schedule_data import get_mock_schedule_data, ScheduleData
+try:
+    from app.schedule_data import get_mock_schedule_data, get_schedule_data, ScheduleData
+except ImportError:
+    # 如果从项目根目录运行，使用相对导入
+    from schedule_data import get_mock_schedule_data, get_schedule_data, ScheduleData
 
 # 排班表数据结构定义
 @dataclass
@@ -227,6 +248,12 @@ app = Flask(
     static_folder=str((Path(__file__).parent / "static")),
 )
 
+# Configure Flask session
+app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'your_secret_key_here')
+
+# Initialize WeChatAuth
+wechat_auth = WeChatAuth()
+
 
 def ensure_data_dir() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -240,6 +267,7 @@ def ensure_schedules_dir() -> None:
 def init_db() -> None:
     ensure_data_dir()
     with sqlite3.connect(DB_PATH) as conn:
+        # 联系消息表
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS contact_messages (
@@ -251,6 +279,40 @@ def init_db() -> None:
             )
             """
         )
+        
+        # 用户表 - 支持多用户
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                openid TEXT UNIQUE NOT NULL,
+                nickname TEXT,
+                avatar_url TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        
+        # 用户档案表 - 关联到用户ID
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                hospital TEXT NOT NULL,
+                department TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+            """
+        )
+        
+        # 创建索引
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_users_openid ON users(openid)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON user_profiles(user_id)")
+        
         conn.commit()
 
 
@@ -287,6 +349,156 @@ def parse_contact_payload(payload: Optional[Dict[str, Any]]) -> Tuple[Optional[C
     return ContactPayload(name=name, email=email, message=message), None
 
 
+# ---------- WeChat Authentication Routes ----------
+
+@app.route("/wechat/login")
+def wechat_login():
+    """微信登录入口"""
+    # 生成微信授权URL
+    auth_url = wechat_auth.get_authorization_url()
+    return redirect(auth_url)
+
+
+@app.route("/wechat/callback")
+def wechat_callback():
+    """微信授权回调"""
+    try:
+        # 获取授权码
+        code = request.args.get('code')
+        if not code:
+            return jsonify({"error": "授权失败"}), 400
+        
+        # 通过授权码获取用户信息
+        user_info = wechat_auth.get_user_info(code)
+        if not user_info:
+            return jsonify({"error": "获取用户信息失败"}), 400
+        
+        # 保存或更新用户信息
+        user_id = save_or_update_user(user_info)
+        
+        # 设置用户会话
+        session['user_id'] = user_id
+        session['openid'] = user_info['openid']
+        session['nickname'] = user_info.get('nickname', '')
+        
+        # 重定向到个人主页
+        return redirect(url_for('profile'))
+        
+    except Exception as e:
+        print(f"微信回调处理失败: {e}")
+        return jsonify({"error": "登录失败，请重试"}), 500
+
+
+@app.route("/wechat/logout")
+def wechat_logout():
+    """微信登出"""
+    session.clear()
+    return redirect(url_for('index'))
+
+
+def save_or_update_user(user_info: Dict[str, Any]) -> int:
+    """保存或更新用户信息，返回用户ID"""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            # 检查用户是否已存在
+            cursor = conn.execute(
+                "SELECT id FROM users WHERE openid = ?",
+                (user_info['openid'],)
+            )
+            existing_user = cursor.fetchone()
+            
+            if existing_user:
+                # 更新现有用户
+                user_id = existing_user[0]
+                conn.execute(
+                    """
+                    UPDATE users 
+                    SET nickname = ?, avatar_url = ?, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        user_info.get('nickname', ''),
+                        user_info.get('headimgurl', ''),
+                        datetime.utcnow().isoformat(),
+                        user_id
+                    )
+                )
+            else:
+                # 创建新用户
+                cursor = conn.execute(
+                    """
+                    INSERT INTO users (openid, nickname, avatar_url, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        user_info['openid'],
+                        user_info.get('nickname', ''),
+                        user_info.get('headimgurl', ''),
+                        datetime.utcnow().isoformat(),
+                        datetime.utcnow().isoformat()
+                    )
+                )
+                user_id = cursor.lastrowid
+            
+            conn.commit()
+            return user_id
+            
+    except Exception as e:
+        print(f"保存用户信息失败: {e}")
+        raise
+
+
+def get_current_user() -> Optional[Dict[str, Any]]:
+    """获取当前登录用户信息"""
+    if 'user_id' not in session:
+        return None
+    
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.execute(
+                """
+                SELECT u.id, u.openid, u.nickname, u.avatar_url, u.created_at,
+                       up.name, up.hospital, up.department
+                FROM users u
+                LEFT JOIN user_profiles up ON u.id = up.user_id
+                WHERE u.id = ?
+                """,
+                (session['user_id'],)
+            )
+            row = cursor.fetchone()
+            
+            if row:
+                return {
+                    "id": row[0],
+                    "openid": row[1],
+                    "nickname": row[2],
+                    "avatar_url": row[3],
+                    "created_at": row[4],
+                    "name": row[5],
+                    "hospital": row[6],
+                    "department": row[7]
+                }
+            else:
+                # 用户不存在，清除会话
+                session.clear()
+                return None
+                
+    except Exception as e:
+        print(f"获取用户信息失败: {e}")
+        session.clear()
+        return None
+
+
+def require_login(f):
+    """登录验证装饰器"""
+    def decorated_function(*args, **kwargs):
+        if not get_current_user():
+            return redirect(url_for('wechat_login'))
+        return f(*args, **kwargs)
+    decorated_function.__name__ = f.__name__
+    return decorated_function
+
+
 # ---------- Schedules helpers ----------
 
 def get_current_week_str() -> str:
@@ -311,17 +523,22 @@ def find_existing_schedule_path(week_str: str) -> Optional[Path]:
 
 @app.get("/")
 def index() -> str:
-    return render_template("index.html")
+    user_info = get_current_user()
+    return render_template("index.html", user_info=user_info)
 
 
 @app.get("/about")
 def about():
-    return render_template("about.html")
+    user_info = get_current_user()
+    return render_template("about.html", user_info=user_info)
 
 
 @app.get("/schedule")
+@require_login
 def schedule():
-    return render_template("schedule.html")
+    # 获取用户信息，用于检查是否已设置姓名
+    user_info = get_current_user()
+    return render_template("schedule.html", user_info=user_info)
 
 
 # Serve saved schedule images
@@ -333,8 +550,10 @@ def serve_schedule_image(filename: str):
 
 # Insider page: preview or upload schedule image by week
 @app.route("/insider", methods=["GET", "POST"])
+@require_login
 def insider():
     ensure_schedules_dir()
+    user_info = get_current_user()
 
     if request.method == "POST":
         week_str = (request.form.get("week") or "").strip()
@@ -348,10 +567,10 @@ def insider():
 
         if not week_str or not is_valid_week_string(week_str):
             error_msg = f"请选择正确的周，例如 2025-W03。当前值: '{week_str}'"
-            return render_template("insider.html", error=error_msg, week=week_str or get_current_week_str())
+            return render_template("insider.html", error=error_msg, week=week_str or get_current_week_str(), user_info=user_info)
 
         if not image_file or image_file.filename == "":
-            return render_template("insider.html", error="请上传排班表图片", week=week_str)
+            return render_template("insider.html", error="请上传排班表图片", week=week_str, user_info=user_info)
 
         # Determine extension
         ext = (Path(image_file.filename).suffix or "").lower().lstrip(".")
@@ -360,6 +579,7 @@ def insider():
                 "insider.html",
                 error=f"不支持的图片格式: .{ext}，请上传: {', '.join(ALLOWED_IMAGE_EXTENSIONS)}",
                 week=week_str,
+                user_info=user_info
             )
 
         # Save as {week}.{ext}
@@ -386,18 +606,94 @@ def insider():
     if existing_path:
         image_url = url_for("serve_schedule_image", filename=existing_path.name)
 
-    return render_template("insider.html", week=week_str, image_url=image_url)
+    return render_template("insider.html", week=week_str, image_url=image_url, user_info=user_info)
+
+
+def get_available_schedules() -> List[Dict[str, str]]:
+    """获取所有可用的排班文件列表，并转换为友好格式"""
+    ensure_schedules_dir()
+    schedules = []
+    
+    # 查找所有CSV文件
+    for csv_file in SCHEDULES_DIR.glob("*.csv"):
+        filename = csv_file.stem  # 获取不带扩展名的文件名
+        
+        # 解析文件名格式: "2024-W34-0821-0830"
+        parts = filename.split('-')
+        if len(parts) >= 4 and parts[1].startswith('W'):
+            year = parts[0]
+            week_num = parts[1][1:]  # 去掉'W'前缀
+            start_date = parts[2]
+            end_date = parts[3]
+            
+            # 转换为友好格式: "第34周(0821-0830)"
+            display_name = f"第{week_num}周({start_date}-{end_date})"
+            
+            schedules.append({
+                "filename": filename,
+                "display_name": display_name,
+                "year": year,
+                "week": week_num
+            })
+    
+    # 按年份和周数排序
+    schedules.sort(key=lambda x: (x["year"], int(x["week"])))
+    
+    return schedules
+
+
+@app.get("/api/schedules")
+def api_get_schedules():
+    """API端点：获取所有可用的排班文件列表"""
+    schedules = get_available_schedules()
+    return jsonify({"schedules": schedules})
 
 
 @app.route("/schedule-table")
 def schedule_table():
     """显示排班表数据"""
     week = request.args.get("week", "2024-32")
+    user_info = get_current_user()
     
-    # 获取mock数据
-    schedule_data = get_mock_schedule_data(week)
+    # 获取排班数据，优先从CSV读取
+    schedule_data = get_schedule_data(week)
     
-    return render_template("schedule_table.html", schedule_data=schedule_data)
+    return render_template("schedule_table.html", schedule_data=schedule_data, user_info=user_info)
+
+
+@app.get("/api/schedule-data/<week>")
+def api_get_schedule_data(week: str):
+    """API端点：获取指定周的排班数据"""
+    try:
+        schedule_data = get_schedule_data(week)
+        
+        # 转换为JSON格式
+        result = {
+            "week": schedule_data.week,
+            "tables": []
+        }
+        
+        for table in schedule_data.tables:
+            table_data = {
+                "title": table.title,
+                "shifts": [],
+                "dates": table.dates
+            }
+            
+            for shift in table.shifts:
+                shift_data = {
+                    "position": shift.position,
+                    "time_range": shift.time_range,
+                    "assignments": shift.assignments
+                }
+                table_data["shifts"].append(shift_data)
+            
+            result["tables"].append(table_data)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.get("/health")
@@ -445,6 +741,117 @@ def readme() -> str:
 def wechat_verify() -> str:
     """微信公众号JS接口安全域名验证文件"""
     return "C1jlF7TZzN4da9le"
+
+
+@app.get("/profile")
+@require_login
+def profile():
+    """个人主页"""
+    # 从数据库获取用户信息
+    user_info = get_current_user()
+    return render_template("profile.html", user_info=user_info)
+
+
+@app.post("/api/profile")
+@require_login
+def api_profile():
+    """API端点：保存用户个人信息"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"ok": False, "error": "请求数据不能为空"}), 400
+        
+        name = (data.get("name") or "").strip()
+        hospital = (data.get("hospital") or "").strip()
+        department = (data.get("department") or "").strip()
+        
+        # 验证数据
+        if not name or not hospital or not department:
+            return jsonify({"ok": False, "error": "请填写完整信息"}), 400
+        
+        if len(name) > 50:
+            return jsonify({"ok": False, "error": "姓名过长"}), 400
+        
+        if len(hospital) > 100:
+            return jsonify({"ok": False, "error": "医院名称过长"}), 400
+        
+        if len(department) > 50:
+            return jsonify({"ok": False, "error": "科室名称过长"}), 400
+        
+        # 保存到数据库
+        save_user_profile(name, hospital, department)
+        
+        return jsonify({"ok": True})
+        
+    except Exception as e:
+        print(f"保存用户信息失败: {e}")
+        return jsonify({"ok": False, "error": "保存失败，请重试"}), 500
+
+
+def get_user_profile() -> Dict[str, str]:
+    """从数据库获取用户信息（兼容旧版本，现在使用get_current_user）"""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.execute(
+                "SELECT name, hospital, department FROM user_profiles ORDER BY updated_at DESC LIMIT 1"
+            )
+            row = cursor.fetchone()
+            
+            if row:
+                return {
+                    "name": row[0],
+                    "hospital": row[1],
+                    "department": row[2]
+                }
+            else:
+                return {}
+                
+    except Exception as e:
+        print(f"获取用户信息失败: {e}")
+        return {}
+
+
+def save_user_profile(name: str, hospital: str, department: str) -> None:
+    """保存用户信息到数据库（支持多用户）"""
+    try:
+        user_info = get_current_user()
+        if not user_info:
+            raise Exception("用户未登录")
+        
+        with sqlite3.connect(DB_PATH) as conn:
+            # 检查是否已有该用户的profile记录
+            cursor = conn.execute(
+                "SELECT id FROM user_profiles WHERE user_id = ?",
+                (user_info['id'],)
+            )
+            existing_profile = cursor.fetchone()
+            
+            if existing_profile:
+                # 更新现有记录
+                conn.execute(
+                    """
+                    UPDATE user_profiles 
+                    SET name = ?, hospital = ?, department = ?, updated_at = ?
+                    WHERE user_id = ?
+                    """,
+                    (name, hospital, department, datetime.utcnow().isoformat(), user_info['id'])
+                )
+            else:
+                # 插入新记录
+                conn.execute(
+                    """
+                    INSERT INTO user_profiles (user_id, name, hospital, department, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (user_info['id'], name, hospital, department, 
+                     datetime.utcnow().isoformat(), datetime.utcnow().isoformat())
+                )
+            
+            conn.commit()
+            
+    except Exception as e:
+        print(f"保存用户信息到数据库失败: {e}")
+        raise
 
 
 @app.post("/api/contact")

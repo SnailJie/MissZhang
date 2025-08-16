@@ -1,94 +1,148 @@
-# MissZhang - Simple Python Web Service (Flask)
+# MissZhang 排班管理系统
 
-A cheerful, mobile-friendly landing site with a Python backend. One command to deploy and run on a server.
+一个支持微信登录的医院排班管理系统，基于Flask构建。
 
-## Features
-- Responsive H5 front-end (mobile first)
-- Contact form posting to backend (`/api/contact`)
-- SQLite storage (file: `data/app.db`)
-- Health check at `/health`
-- Gunicorn config with daemon mode, logs, PID file
-- **Production ready**: Uses port 80 for standard HTTP access
+## 功能特性
 
-## Prerequisites
-- Python 3.9+ on the server
-- Root access (for port 80)
-- Domain name (optional, for custom domain access)
+- 🔐 微信网页授权登录
+- 👥 多用户支持
+- 📅 排班表管理
+- 🖼️ 排班表图片上传和预览
+- 📊 排班数据CSV导入导出
+- 📱 响应式设计
 
-## Quick Start (one command)
+## 快速开始
+
+### 1. 安装依赖
+
 ```bash
-bash scripts/start.sh
+pip install -r requirements.txt
 ```
 
-- Once started, visit: `http://<your-server-ip>`
-- To stop:
+### 2. 配置微信
+
+创建 `.env` 文件并配置以下环境变量：
+
 ```bash
-bash scripts/stop.sh
+# 微信配置
+WECHAT_APP_ID=your_app_id_here
+WECHAT_APP_SECRET=your_app_secret_here
+WECHAT_REDIRECT_URI=http://localhost:5000/wechat/callback
+
+# Flask配置
+FLASK_SECRET_KEY=your_secret_key_here
+FLASK_ENV=development
+FLASK_DEBUG=1
+FLASK_PORT=5000
 ```
 
-## Domain Setup (腾讯云域名 + 阿里云服务器)
+### 3. 获取微信配置
 
-### 1. 腾讯云域名解析
-1. 登录腾讯云控制台 → 域名管理
-2. 添加解析记录：
-   - **记录类型**: A
-   - **主机记录**: @ (或 www)
-   - **记录值**: 172.31.73.92
-   - **TTL**: 600
+1. 登录 [微信公众平台](https://mp.weixin.qq.com/)
+2. 创建或选择公众号
+3. 在"开发" -> "基本配置"中获取 `AppID` 和 `AppSecret`
+4. 在"开发" -> "接口权限"中开启"网页授权"
 
-### 2. 阿里云服务器配置
-1. **安全组设置**: 开放80端口
-2. **上传项目**:
-   ```bash
-   scp -r /path/to/missZhang root@172.31.73.92:/opt/
-   ```
-3. **部署应用**:
-   ```bash
-   ssh root@172.31.73.92
-   cd /opt/missZhang
-   sudo bash scripts/deploy.sh
-   ```
+### 4. 运行应用
 
-### 3. 验证访问
-- 直接访问: `http://172.31.73.92`
-- 域名访问: `http://yourdomain.com`
-
-## Project Structure
-```
-.
-├── app
-│   ├── __init__.py
-│   ├── main.py
-│   ├── static
-│   │   ├── css
-│   │   │   └── style.css
-│   │   └── js
-│   │       └── main.js
-│   └── templates
-│       ├── base.html
-│       └── index.html
-├── data
-│   └── .gitkeep
-├── docs
-│   └── domain-setup.md
-├── gunicorn.conf.py
-├── requirements.txt
-├── scripts
-│   ├── start.sh
-│   ├── stop.sh
-│   └── deploy.sh
-└── README.md
+```bash
+python run.py
 ```
 
-## Changing the Port or Workers
-- Edit `gunicorn.conf.py` (`bind`, `workers`, `threads`).
-- For development, change `bind = "0.0.0.0:8000"`
+应用将在 `http://localhost:5000` 启动。
 
-## Logs and PID
-- Logs: `logs/gunicorn.access.log`, `logs/gunicorn.error.log`
-- PID: `run/gunicorn.pid`
+## 使用说明
 
-## Notes
-- Database file is created on first run.
-- Application runs on port 80 for production (standard HTTP).
-- If you prefer foreground mode, set `daemon = False` in `gunicorn.conf.py` and run `bash scripts/start.sh` in a screen/tmux session. 
+### 微信登录流程
+
+1. 用户访问系统首页
+2. 点击"微信登录"按钮
+3. 跳转到微信授权页面
+4. 用户确认授权后返回系统
+5. 系统创建或更新用户信息
+6. 跳转到个人主页
+
+### 功能页面
+
+- **首页** (`/`): 系统介绍和登录入口
+- **排班表** (`/schedule`): 查看排班信息（需登录）
+- **个人主页** (`/profile`): 管理个人信息（需登录）
+- **排班管理** (`/insider`): 上传和管理排班表（需登录）
+
+## 技术架构
+
+- **后端**: Flask + SQLite
+- **前端**: HTML + CSS + JavaScript
+- **认证**: 微信网页授权
+- **数据库**: SQLite（支持多用户）
+
+## 数据库结构
+
+### users 表
+- `id`: 用户ID
+- `openid`: 微信OpenID
+- `nickname`: 微信昵称
+- `avatar_url`: 头像URL
+- `created_at`: 创建时间
+- `updated_at`: 更新时间
+
+### user_profiles 表
+- `id`: 档案ID
+- `user_id`: 关联用户ID
+- `name`: 真实姓名
+- `hospital`: 医院名称
+- `department`: 科室名称
+- `updated_at`: 更新时间
+
+## 开发说明
+
+### 添加新路由
+
+```python
+@app.route("/new-route")
+@require_login  # 需要登录验证
+def new_route():
+    user_info = get_current_user()
+    return render_template("new_template.html", user_info=user_info)
+```
+
+### 用户验证装饰器
+
+```python
+from app.main import require_login
+
+@app.route("/protected")
+@require_login
+def protected_route():
+    # 只有登录用户才能访问
+    pass
+```
+
+## 部署说明
+
+### 生产环境
+
+1. 设置 `FLASK_ENV=production`
+2. 使用 `gunicorn` 或 `uwsgi` 部署
+3. 配置反向代理（Nginx）
+4. 使用环境变量管理敏感配置
+
+### Docker 部署
+
+```dockerfile
+FROM python:3.9-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 5000
+CMD ["python", "run.py"]
+```
+
+## 许可证
+
+MIT License
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request！ 

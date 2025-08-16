@@ -201,3 +201,86 @@ def get_mock_schedule_data(week: str) -> ScheduleData:
     weekend_table = ScheduleTable("周末班", weekend_shifts, ["8月9日", "8月10日"])
     
     return ScheduleData(week, [mri_morning_table, mri_afternoon_table, mri_evening_table, weekend_table]) 
+
+
+def read_schedule_from_csv(week: str) -> ScheduleData:
+    """从CSV文件读取排班数据"""
+    import csv
+    import os
+    from pathlib import Path
+    
+    # 构建CSV文件路径
+    base_dir = Path(__file__).resolve().parents[1]
+    csv_path = base_dir / "data" / "schedules" / f"{week}.csv"
+    
+    if not csv_path.exists():
+        # 如果CSV文件不存在，返回mock数据
+        return get_mock_schedule_data(week)
+    
+    # 存储解析后的数据
+    table_data = {}  # {table_title: {position: {date: staff_name}}}
+    dates = set()
+    
+    try:
+        with open(csv_path, 'r', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            
+            for row in reader:
+                table_title = row['table_title']
+                position = row['position']
+                time_range = row['time_range']
+                date = row['date']
+                staff_name = row['staff_name']
+                
+                # 收集所有日期
+                dates.add(date)
+                
+                # 初始化数据结构
+                if table_title not in table_data:
+                    table_data[table_title] = {}
+                
+                if position not in table_data[table_title]:
+                    table_data[table_title][position] = {
+                        'time_range': time_range,
+                        'assignments': {}
+                    }
+                
+                # 添加排班信息
+                table_data[table_title][position]['assignments'][date] = staff_name
+    
+    except Exception as e:
+        print(f"Error reading CSV file: {e}")
+        # 如果读取失败，返回mock数据
+        return get_mock_schedule_data(week)
+    
+    # 转换为ScheduleData格式
+    tables = []
+    dates_list = sorted(list(dates))
+    
+    for table_title, positions in table_data.items():
+        shifts = []
+        for position, data in positions.items():
+            shift = ScheduleShift(
+                position=position,
+                time_range=data['time_range'],
+                assignments=data['assignments']
+            )
+            shifts.append(shift)
+        
+        table = ScheduleTable(
+            title=table_title,
+            shifts=shifts,
+            dates=dates_list
+        )
+        tables.append(table)
+    
+    return ScheduleData(week=week, tables=tables)
+
+
+def get_schedule_data(week: str) -> ScheduleData:
+    """获取排班数据，优先从CSV读取，如果失败则返回mock数据"""
+    try:
+        return read_schedule_from_csv(week)
+    except Exception as e:
+        print(f"Failed to read CSV, falling back to mock data: {e}")
+        return get_mock_schedule_data(week) 

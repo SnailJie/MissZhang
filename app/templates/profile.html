@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% set title = '个人主页' %}
+
+{% block head %}
+<style>
+.profile-card {
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border-radius: 0.75rem;
+}
+
+.profile-card .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.profile-info {
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.profile-info .label {
+  font-weight: 600;
+  color: #495057;
+  min-width: 80px;
+  display: inline-block;
+}
+
+.profile-info .value {
+  color: #6c757d;
+}
+
+.edit-form .form-label {
+  font-weight: 600;
+  color: #495057;
+}
+
+.edit-form .form-select {
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.edit-form .form-select:focus {
+  border-color: #6be3ff;
+  box-shadow: 0 0 0 0.2rem rgba(107, 227, 255, 0.25);
+  background: #ffffff;
+  transform: translateY(-1px);
+}
+
+.edit-form .form-control {
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.edit-form .form-control:focus {
+  border-color: #6be3ff;
+  box-shadow: 0 0 0 0.2rem rgba(107, 227, 255, 0.25);
+}
+
+.btn-edit {
+  background: linear-gradient(135deg, #6be3ff 0%, #5dd1ed 100%);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  padding: 10px 20px;
+  transition: all 0.3s ease;
+}
+
+.btn-edit:hover {
+  background: linear-gradient(135deg, #5dd1ed 0%, #4bc0e0 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(107, 227, 255, 0.3);
+}
+
+.btn-save {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  padding: 10px 20px;
+  transition: all 0.3s ease;
+}
+
+.btn-save:hover {
+  background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-cancel {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  padding: 10px 20px;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+  background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+.alert {
+  border-radius: 8px;
+  border: none;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+@media (max-width: 768px) {
+  .profile-info .label {
+    min-width: 60px;
+    font-size: 0.95rem;
+  }
+  
+  .profile-info .value {
+    font-size: 0.95rem;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="py-4">
+  <div class="container" style="max-width: 720px;">
+    <h2 class="mb-4">个人主页</h2>
+
+    {% if success_message %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      {{ success_message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    {% if error_message %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      {{ error_message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- 个人信息显示卡片 -->
+    <div class="card profile-card mb-4" id="profileDisplayCard">
+      <div class="card-header">
+        <h5 class="mb-0">个人信息</h5>
+      </div>
+      <div class="card-body">
+        <div class="profile-info mb-3">
+          <div class="mb-2">
+            <span class="label">姓名：</span>
+            <span class="value" id="displayName">{{ user_info.name or '未设置' }}</span>
+          </div>
+          <div class="mb-2">
+            <span class="label">医院：</span>
+            <span class="value" id="displayHospital">{{ user_info.hospital or '未设置' }}</span>
+          </div>
+          <div class="mb-2">
+            <span class="label">科室：</span>
+            <span class="value" id="displayDepartment">{{ user_info.department or '未设置' }}</span>
+          </div>
+        </div>
+        <button type="button" class="btn btn-edit" onclick="showEditForm()">
+          ✏️ 编辑信息
+        </button>
+      </div>
+    </div>
+
+    <!-- 编辑表单卡片 -->
+    <div class="card profile-card" id="profileEditCard" style="display: none;">
+      <div class="card-header">
+        <h5 class="mb-0">编辑个人信息</h5>
+      </div>
+      <div class="card-body">
+        <form id="profileEditForm" class="edit-form">
+          <div class="mb-3">
+            <label for="name" class="form-label">姓名</label>
+            <input type="text" class="form-control" id="name" name="name" value="{{ user_info.name or '' }}" required>
+          </div>
+          <div class="mb-3">
+            <label for="hospital" class="form-label">医院</label>
+            <select class="form-select" id="hospital" name="hospital" required>
+              <option value="">请选择医院</option>
+              <option value="四川大学华西医院(本部)" {% if user_info.hospital == '四川大学华西医院(本部)' %}selected{% endif %}>
+                四川大学华西医院(本部)
+              </option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="department" class="form-label">科室</label>
+            <select class="form-select" id="department" name="department" required>
+              <option value="">请选择科室</option>
+              <option value="放射科" {% if user_info.department == '放射科' %}selected{% endif %}>
+                放射科
+              </option>
+            </select>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-save">
+              💾 保存
+            </button>
+            <button type="button" class="btn btn-cancel" onclick="hideEditForm()">
+              ❌ 取消
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <a href="/" class="btn btn-link text-decoration-none">
+        ← 返回首页
+      </a>
+    </div>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // 绑定表单提交事件
+  const profileEditForm = document.getElementById('profileEditForm');
+  if (profileEditForm) {
+    profileEditForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      saveProfile();
+    });
+  }
+});
+
+function showEditForm() {
+  document.getElementById('profileDisplayCard').style.display = 'none';
+  document.getElementById('profileEditCard').style.display = 'block';
+}
+
+function hideEditForm() {
+  document.getElementById('profileDisplayCard').style.display = 'block';
+  document.getElementById('profileEditCard').style.display = 'none';
+}
+
+function saveProfile() {
+  const formData = new FormData(document.getElementById('profileEditForm'));
+  const data = {
+    name: formData.get('name'),
+    hospital: formData.get('hospital'),
+    department: formData.get('department')
+  };
+
+  // 验证数据
+  if (!data.name || !data.hospital || !data.department) {
+    alert('请填写完整信息');
+    return;
+  }
+
+  // 发送保存请求
+  fetch('/api/profile', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.ok) {
+      // 更新显示的信息
+      document.getElementById('displayName').textContent = data.name;
+      document.getElementById('displayHospital').textContent = data.hospital;
+      document.getElementById('displayDepartment').textContent = data.department;
+      
+      // 隐藏编辑表单
+      hideEditForm();
+      
+      // 显示成功消息
+      showAlert('个人信息保存成功！', 'success');
+      
+      // 刷新页面以显示成功消息
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showAlert(result.error || '保存失败，请重试', 'danger');
+    }
+  })
+  .catch(error => {
+    console.error('保存失败:', error);
+    showAlert('保存失败，请重试', 'danger');
+  });
+}
+
+function showAlert(message, type) {
+  // 移除现有的提示
+  const existingAlert = document.querySelector('.alert');
+  if (existingAlert) {
+    existingAlert.remove();
+  }
+
+  // 创建新的提示
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+  alertDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  `;
+
+  // 插入到页面顶部
+  const container = document.querySelector('.container');
+  container.insertBefore(alertDiv, container.firstChild);
+}
+</script>
+{% endblock %}

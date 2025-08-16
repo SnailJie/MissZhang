@@ -5,8 +5,10 @@
   <div class="container schedule-container">
     <h1>我的排班</h1>
     <div class="schedule-controls">
-      <label for="week-date">选择日期：</label>
-      <input type="date" id="week-date" name="week-date" />
+      <label for="schedule-select">选择排班周次：</label>
+      <select id="schedule-select" name="schedule-select">
+        <option value="">正在加载...</option>
+      </select>
     </div>
     <table class="schedule-table">
       <thead>
@@ -22,39 +24,183 @@
     </table>
   </div>
 </section>
+
+<!-- 用户姓名检查弹窗 -->
+<div class="modal fade" id="nameCheckModal" tabindex="-1" aria-labelledby="nameCheckModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="nameCheckModalLabel">提示</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        请先到个人主页维护信息
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="goToProfileBtn">去维护</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
-// 简单的周排班渲染逻辑
-function getWeekDates(date) {
-  const d = new Date(date);
-  const day = d.getDay() || 7;
-  d.setDate(d.getDate() - day + 1);
-  const week = [];
-  for (let i = 0; i < 7; i++) {
-    const curr = new Date(d);
-    curr.setDate(d.getDate() + i);
-    week.push(curr);
+// 用于存储排班数据
+let availableSchedules = [];
+
+// 获取可用的排班文件列表
+async function loadScheduleOptions() {
+  try {
+    const response = await fetch('/api/schedules');
+    const data = await response.json();
+    availableSchedules = data.schedules;
+    
+    const select = document.getElementById('schedule-select');
+    select.innerHTML = '';
+    
+    if (availableSchedules.length === 0) {
+      select.innerHTML = '<option value="">暂无排班数据</option>';
+      return;
+    }
+    
+    // 添加选项到下拉框
+    availableSchedules.forEach(schedule => {
+      const option = document.createElement('option');
+      option.value = schedule.filename;
+      option.textContent = schedule.display_name;
+      select.appendChild(option);
+    });
+    
+    // 默认选择第一个
+    if (availableSchedules.length > 0) {
+      select.value = availableSchedules[0].filename;
+      renderScheduleFromFilename(availableSchedules[0].filename);
+    }
+    
+  } catch (error) {
+    console.error('Failed to load schedule options:', error);
+    const select = document.getElementById('schedule-select');
+    select.innerHTML = '<option value="">加载失败</option>';
   }
-  return week;
 }
-const duty = [
-  '白班 8:00-17:00', '夜班 17:00-次日8:00', '休息', '白班 8:00-17:00', '白班 8:00-17:00', '夜班 17:00-次日8:00', '休息'
-];
-function renderSchedule(dateStr) {
-  const week = getWeekDates(dateStr);
-  const days = ['一','二','三','四','五','六','日'];
+
+// 根据文件名解析日期范围并渲染排班表
+function renderScheduleFromFilename(filename) {
+  if (!filename) {
+    const tbody = document.getElementById('schedule-body');
+    tbody.innerHTML = '<tr><td colspan="3">请选择排班周次</td></tr>';
+    return;
+  }
+  
+  // 解析文件名格式: "2024-W34-0821-0830"
+  const parts = filename.split('-');
+  if (parts.length >= 4 && parts[1].startsWith('W')) {
+    const year = parts[0];
+    const weekNum = parts[1].substring(1); // 去掉'W'前缀
+    const startDate = parts[2];
+    const endDate = parts[3];
+    
+    // 构建日期范围 (简化版本，基于开始日期)
+    const startMonth = parseInt(startDate.substring(0, 2));
+    const startDay = parseInt(startDate.substring(2, 4));
+    const endMonth = parseInt(endDate.substring(0, 2));
+    const endDay = parseInt(endDate.substring(2, 4));
+    
+    renderScheduleForWeek(year, startMonth, startDay, endMonth, endDay, weekNum);
+  }
+}
+
+// 从URL参数获取周次并自动选择
+function getWeekFromUrl() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const week = urlParams.get('week');
+  if (week) {
+    console.log('从URL获取到周次参数:', week);
+    return week;
+  }
+  return null;
+}
+
+// 渲染指定周次的排班表
+function renderScheduleForWeek(year, startMonth, startDay, endMonth, endDay, weekNum) {
   const tbody = document.getElementById('schedule-body');
+  const days = ['一','二','三','四','五','六','日'];
+  const duty = [
+    '白班 8:00-17:00', '夜班 17:00-次日8:00', '休息', '白班 8:00-17:00', 
+    '白班 8:00-17:00', '夜班 17:00-次日8:00', '休息'
+  ];
+  
   tbody.innerHTML = '';
-  week.forEach((d, i) => {
-    const ymd = d.toISOString().slice(0,10);
-    tbody.innerHTML += `<tr><td>星期${days[i]}</td><td>${ymd}</td><td>${duty[i]}</td></tr>`;
-  });
+  
+  // 创建周内日期
+  const startDate = new Date(parseInt(year), startMonth - 1, startDay);
+  
+  for (let i = 0; i < 7; i++) {
+    const currentDate = new Date(startDate);
+    currentDate.setDate(startDate.getDate() + i);
+    
+    const monthStr = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(currentDate.getDate()).padStart(2, '0');
+    const dateStr = `${monthStr}月${dayStr}日`;
+    
+    tbody.innerHTML += `
+      <tr>
+        <td>星期${days[i]}</td>
+        <td>${dateStr}</td>
+        <td>${duty[i]}</td>
+      </tr>
+    `;
+  }
 }
+
 document.addEventListener('DOMContentLoaded', () => {
-  const input = document.getElementById('week-date');
-  const today = new Date().toISOString().slice(0,10);
-  input.value = today;
-  renderSchedule(today);
-  input.addEventListener('change', e => renderSchedule(e.target.value));
+  // 检查用户是否已设置姓名
+  checkUserName();
+  
+  const select = document.getElementById('schedule-select');
+  
+  // 加载排班选项
+  loadScheduleOptions();
+  
+  // 监听下拉框变化
+  select.addEventListener('change', (e) => {
+    renderScheduleFromFilename(e.target.value);
+  });
+  
+  // 检查URL参数，如果有周次参数则自动选择
+  const urlWeek = getWeekFromUrl();
+  if (urlWeek) {
+    // 等待排班选项加载完成后再设置
+    setTimeout(() => {
+      if (availableSchedules.length > 0) {
+        // 查找匹配的排班
+        const matchingSchedule = availableSchedules.find(s => s.filename === urlWeek);
+        if (matchingSchedule) {
+          console.log('自动选择周次:', matchingSchedule.display_name);
+          select.value = urlWeek;
+          renderScheduleFromFilename(urlWeek);
+        } else {
+          console.log('未找到匹配的排班:', urlWeek);
+        }
+      }
+    }, 500); // 给一点时间让排班选项加载完成
+  }
+  
+  // 绑定弹窗按钮事件
+  document.getElementById('goToProfileBtn').addEventListener('click', () => {
+    window.location.href = '/profile';
+  });
 });
+
+// 检查用户姓名是否已设置
+function checkUserName() {
+  // 从模板变量获取用户信息
+  const userInfo = {{ user_info | tojson | safe }};
+  
+  // 检查姓名是否为空或未设置
+  if (!userInfo || !userInfo.name || userInfo.name.trim() === '') {
+    // 显示弹窗
+    const modal = new bootstrap.Modal(document.getElementById('nameCheckModal'));
+    modal.show();
+  }
+}
 </script>
 {% endblock %} 
