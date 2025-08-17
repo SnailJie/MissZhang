@@ -208,6 +208,7 @@
             <tr>
               <th width="120">日期</th>
               <th width="120">班次</th>
+              <th width="120">岗位</th>
               <th width="80">操作</th>
             </tr>
           </thead>
@@ -282,7 +283,12 @@ function loadWeekOptions() {
       const weekSelect = document.getElementById('weekSelect');
       weekSelect.innerHTML = '<option value="">请选择排班周次</option>';
       
-      data.week_options.forEach(option => {
+      // 只显示2025年的选项
+      const filteredOptions = data.week_options.filter(option => {
+        return option.label && option.label.includes('2025');
+      });
+      
+      filteredOptions.forEach(option => {
         const optionElement = document.createElement('option');
         optionElement.value = option.value;
         optionElement.textContent = option.label;
@@ -333,6 +339,12 @@ function addWeekendRow() {
         ${WEEKEND_SHIFT_OPTIONS.map(shift => `<option value="${shift}">${shift}</option>`).join('')}
       </select>
     </td>
+    <td>
+      <select name="weekend_position_${weekendRowCount}" required>
+        <option value="">选择岗位</option>
+        ${POSITION_OPTIONS.map(position => `<option value="${position}">${position}</option>`).join('')}
+      </select>
+    </td>
     <td><button type="button" class="remove-row-btn" onclick="removeRow(this)">删除</button></td>
   `;
   tbody.appendChild(row);
@@ -378,12 +390,14 @@ function collectFormData() {
   for (let i = 1; i <= weekendRowCount; i++) {
     const dateInput = document.querySelector(`input[name="weekend_date_${i}"]`);
     const shiftSelect = document.querySelector(`select[name="weekend_shift_${i}"]`);
+    const positionSelect = document.querySelector(`select[name="weekend_position_${i}"]`);
     
     if (dateInput && dateInput.closest('tr')) { // 检查行是否还存在
-      if (dateInput.value && shiftSelect.value) {
+      if (dateInput.value && shiftSelect.value && positionSelect.value) {
         weekendData.push({
           date: dateInput.value,
           shift: shiftSelect.value,
+          position: positionSelect.value,
           staff: '张珍'
         });
       }
