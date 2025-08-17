@@ -404,19 +404,51 @@ def wechat_logout():
 def wechat_check_login_status():
     """检查用户登录状态"""
     try:
+        print(f"[登录状态检查] 收到检查请求")
         data = request.get_json()
         if not data:
+            print(f"[登录状态检查] 请求数据为空")
             return jsonify({"success": False, "message": "请求数据不能为空"})
         
-        # 这里应该实现检查逻辑，比如检查是否有用户发送了登录关键词
-        # 暂时返回未登录状态
+        print(f"[登录状态检查] 请求数据: {data}")
+        
+        # 检查是否有活跃的登录会话
+        # 这里我们需要检查是否有用户通过微信公众号发送了登录关键词
+        # 由于微信消息是异步的，我们需要在用户身份管理器中维护一个状态
+        
+        # 获取所有活跃会话
+        active_sessions = user_identity_manager.get_all_active_sessions()
+        print(f"[登录状态检查] 活跃会话数量: {len(active_sessions)}")
+        
+        if active_sessions:
+            # 找到最新的会话
+            latest_session = max(active_sessions, key=lambda x: x['timestamp'])
+            print(f"[登录状态检查] 最新会话: {latest_session}")
+            
+            # 检查会话是否过期
+            if not user_identity_manager.is_session_expired(latest_session['session_id']):
+                print(f"[登录状态检查] 会话有效，返回用户信息")
+                return jsonify({
+                    "success": True,
+                    "user_info": latest_session['user_info'],
+                    "session_id": latest_session['session_id'],
+                    "message": "登录成功"
+                })
+            else:
+                print(f"[登录状态检查] 会话已过期")
+                # 清理过期会话
+                user_identity_manager.cleanup_expired_sessions()
+        
+        print(f"[登录状态检查] 没有有效的登录会话")
         return jsonify({
             "success": False, 
             "message": "请向公众号发送关键词进行登录"
         })
         
     except Exception as e:
-        print(f"检查登录状态失败: {e}")
+        print(f"[登录状态检查] 检查登录状态失败: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "message": "检查失败"})
 
 
@@ -457,54 +489,120 @@ def wechat_manual_login():
         return jsonify({"success": False, "message": "登录失败"})
 
 
-@app.route("/wechat/message", methods=["POST"])
+@app.route("/wechat/message", methods=["POST", "GET"])
 def wechat_message():
     """处理微信公众号消息"""
     try:
+        print(f"[微信消息] 收到请求: {request.method}")
+        print(f"[微信消息] 请求头: {dict(request.headers)}")
+        print(f"[微信消息] 请求参数: {dict(request.args)}")
+        
+        # GET请求用于微信服务器配置验证
+        if request.method == 'GET':
+            signature = request.args.get('signature', '')
+            timestamp = request.args.get('timestamp', '')
+            nonce = request.args.get('nonce', '')
+            echostr = request.args.get('echostr', '')
+            
+            print(f"[微信验证] 收到验证请求: signature={signature}, timestamp={timestamp}, nonce={nonce}, echostr={echostr}")
+            
+            # 验证微信服务器签名
+            if wechat_auth.verify_signature(signature, timestamp, nonce, wechat_config.token):
+                print(f"[微信验证] 签名验证成功")
+                return echostr
+            else:
+                print(f"[微信验证] 签名验证失败")
+                return "签名验证失败", 403
+        
+        # POST请求处理用户消息
+        print(f"[微信消息] 处理POST消息")
+        
         # 解析XML消息
         xml_data = request.data.decode('utf-8')
+        print(f"[微信消息] 收到XML数据: {xml_data}")
         
         # 简单的XML解析（生产环境建议使用xml.etree.ElementTree）
         if '<MsgType><![CDATA[text]]></MsgType>' in xml_data:
-            # 文本消息
-            if f'<Content><![CDATA[{wechat_config.login_keyword}]]></Content>' in xml_data:
-                # 提取openid
-                openid_start = xml_data.find('<FromUserName><![CDATA[') + 20
-                openid_end = xml_data.find(']]></FromUserName>')
-                if openid_start > 19 and openid_end > openid_start:
-                    openid = xml_data[openid_start:openid_end]
+            print(f"[微信消息] 检测到文本消息")
+            
+            # 提取消息内容
+            content_start = xml_data.find('<Content><![CDATA[') + 18
+            content_end = xml_data.find(']]></Content>')
+            if content_start > 17 and content_end > content_start:
+                content = xml_data[content_start:content_end]
+                print(f"[微信消息] 消息内容: '{content}'")
+                
+                # 检查是否为登录关键词
+                if content == wechat_config.login_keyword:
+                    print(f"[微信消息] 检测到登录关键词: '{wechat_config.login_keyword}'")
                     
-                    # 验证用户是否为公众号关注者
-                    if wechat_service.verify_user_is_follower(openid):
-                        # 创建登录会话
-                        session_id = user_identity_manager.create_login_session(openid)
-                        if session_id:
-                            # 发送登录成功消息
-                            wechat_service.send_custom_message(
-                                openid, 
-                                f"登录成功！您的会话ID是：{session_id}"
-                            )
+                    # 提取openid
+                    openid_start = xml_data.find('<FromUserName><![CDATA[') + 20
+                    openid_end = xml_data.find(']]></FromUserName>')
+                    if openid_start > 19 and openid_end > openid_start:
+                        openid = xml_data[openid_start:openid_end]
+                        print(f"[微信消息] 提取到OpenID: {openid}")
+                        
+                        # 验证用户是否为公众号关注者
+                        print(f"[微信消息] 开始验证用户是否为关注者")
+                        is_follower = wechat_service.verify_user_is_follower(openid)
+                        print(f"[微信消息] 用户关注状态: {is_follower}")
+                        
+                        if is_follower:
+                            print(f"[微信消息] 用户验证成功，开始创建登录会话")
                             
-                            # 返回成功响应
-                            return f"""<xml>
-                                <ToUserName><![CDATA[{openid}]]></ToUserName>
-                                <FromUserName><![CDATA[{wechat_config.app_id}]]></FromUserName>
-                                <CreateTime>{int(time.time())}</CreateTime>
-                                <MsgType><![CDATA[text]]></MsgType>
-                                <Content><![CDATA[登录成功！请返回网页刷新页面。]]></Content>
-                            </xml>"""
+                            # 创建登录会话
+                            session_id = user_identity_manager.create_login_session(openid)
+                            print(f"[微信消息] 会话创建结果: {session_id}")
+                            
+                            if session_id:
+                                print(f"[微信消息] 会话创建成功，开始发送客服消息")
+                                
+                                # 发送登录成功消息
+                                message_sent = wechat_service.send_custom_message(
+                                    openid, 
+                                    f"登录成功！您的会话ID是：{session_id}"
+                                )
+                                print(f"[微信消息] 客服消息发送结果: {message_sent}")
+                                
+                                # 返回成功响应
+                                response_xml = f"""<xml>
+                                    <ToUserName><![CDATA[{openid}]]></ToUserName>
+                                    <FromUserName><![CDATA[{wechat_config.app_id}]]></FromUserName>
+                                    <CreateTime>{int(time.time())}</CreateTime>
+                                    <MsgType><![CDATA[text]]></MsgType>
+                                    <Content><![CDATA[登录成功！请返回网页刷新页面。]]></Content>
+                                </xml>"""
+                                print(f"[微信消息] 返回成功响应XML")
+                                return response_xml
+                            else:
+                                print(f"[微信消息] 会话创建失败")
+                        else:
+                            print(f"[微信消息] 用户未关注公众号")
+                    else:
+                        print(f"[微信消息] 无法提取OpenID")
+                else:
+                    print(f"[微信消息] 消息内容不是登录关键词")
+            else:
+                print(f"[微信消息] 无法提取消息内容")
+        else:
+            print(f"[微信消息] 不是文本消息")
         
         # 默认回复
-        return f"""<xml>
+        default_response = f"""<xml>
             <ToUserName><![CDATA[{request.form.get('FromUserName', '')}]]></ToUserName>
             <FromUserName><![CDATA[{wechat_config.app_id}]]></FromUserName>
             <CreateTime>{int(time.time())}</CreateTime>
             <MsgType><![CDATA[text]]></MsgType>
             <Content><![CDATA[请发送"{wechat_config.login_keyword}"进行登录]]></Content>
         </xml>"""
+        print(f"[微信消息] 返回默认回复")
+        return default_response
         
     except Exception as e:
-        print(f"处理微信消息失败: {e}")
+        print(f"[微信消息] 处理微信消息失败: {e}")
+        import traceback
+        traceback.print_exc()
         return "success"
 
 

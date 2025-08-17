@@ -2,7 +2,7 @@
 用户身份管理模块
 """
 import time
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 from .wechat_service import WeChatService
 
 class UserIdentityManager:
@@ -16,16 +16,23 @@ class UserIdentityManager:
     
     def create_login_session(self, openid: str) -> Optional[str]:
         """创建用户登录会话"""
+        print(f"[用户身份管理] 开始为用户创建登录会话: {openid}")
         try:
             # 验证用户是否为公众号关注者
+            print(f"[用户身份管理] 验证用户是否为关注者")
             if not self.wechat_service.verify_user_is_follower(openid):
+                print(f"[用户身份管理] 用户验证失败，不是公众号关注者")
                 return None
             
+            print(f"[用户身份管理] 用户验证成功，开始创建会话")
             # 创建会话
             session_id, timestamp = self.wechat_service.create_login_session(openid)
+            print(f"[用户身份管理] 会话创建结果: session_id={session_id}, timestamp={timestamp}")
             
             # 获取用户信息
+            print(f"[用户身份管理] 获取用户资料信息")
             user_info = self.wechat_service.get_user_profile(openid)
+            print(f"[用户身份管理] 用户资料信息: {user_info}")
             
             # 存储会话信息
             self.user_sessions[session_id] = {
@@ -33,14 +40,19 @@ class UserIdentityManager:
                 'timestamp': timestamp,
                 'user_info': user_info
             }
+            print(f"[用户身份管理] 会话信息已存储到内存")
             
             # 建立openid到session_id的映射
             self.openid_sessions[openid] = session_id
+            print(f"[用户身份管理] 建立openid到session_id的映射: {openid} -> {session_id}")
             
+            print(f"[用户身份管理] 登录会话创建成功")
             return session_id
             
         except Exception as e:
-            print(f"创建登录会话失败: {e}")
+            print(f"[用户身份管理] 创建登录会话失败: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def verify_session(self, session_id: str) -> Optional[Dict]:
@@ -128,6 +140,34 @@ class UserIdentityManager:
     def get_active_sessions_count(self) -> int:
         """获取活跃会话数量"""
         return len(self.user_sessions)
+    
+    def get_all_active_sessions(self) -> List[Dict]:
+        """获取所有活跃会话信息"""
+        active_sessions = []
+        current_time = time.time()
+        
+        for session_id, session_data in self.user_sessions.items():
+            # 检查会话是否过期
+            if not self.wechat_service.is_session_expired(session_data['timestamp']):
+                session_info = {
+                    'session_id': session_id,
+                    'openid': session_data['openid'],
+                    'timestamp': session_data['timestamp'],
+                    'user_info': session_data['user_info']
+                }
+                active_sessions.append(session_info)
+        
+        # 按时间戳排序，最新的在前面
+        active_sessions.sort(key=lambda x: x['timestamp'], reverse=True)
+        return active_sessions
+    
+    def is_session_expired(self, session_id: str) -> bool:
+        """检查指定会话是否过期"""
+        if session_id not in self.user_sessions:
+            return True
+        
+        session_data = self.user_sessions[session_id]
+        return self.wechat_service.is_session_expired(session_data['timestamp'])
     
     def get_user_session_info(self, session_id: str) -> Optional[Dict]:
         """获取会话详细信息"""
