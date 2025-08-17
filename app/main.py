@@ -6,7 +6,7 @@ import re
 import os
 import time
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, List
 
@@ -1216,6 +1216,31 @@ def insider():
     return render_template("insider.html", week=week_str, image_url=image_url, user_info=user_info)
 
 
+def get_week_date_range(year: int, week: int) -> Tuple[str, str]:
+    """根据年份和周数计算该周的开始和结束日期
+    
+    Args:
+        year: 年份
+        week: 周数（ISO周数）
+    
+    Returns:
+        tuple: (开始日期, 结束日期) 格式为 "x月x日"
+    """
+    # 计算该年该周的周一日期
+    jan4 = date(year, 1, 4)  # 每年的1月4日总是在第一周
+    week1_monday = jan4 - timedelta(days=jan4.weekday())
+    target_monday = week1_monday + timedelta(weeks=week - 1)
+    
+    # 计算周日日期
+    target_sunday = target_monday + timedelta(days=6)
+    
+    # 格式化为中文日期格式
+    start_date = f"{target_monday.month}月{target_monday.day}日"
+    end_date = f"{target_sunday.month}月{target_sunday.day}日"
+    
+    return start_date, end_date
+
+
 def get_available_schedules() -> List[Dict[str, str]]:
     """获取所有可用的排班文件列表，并转换为友好格式"""
     ensure_schedules_dir()
@@ -1260,8 +1285,9 @@ def get_available_schedules() -> List[Dict[str, str]]:
                         year = parts[0]
                         week_num = parts[1]
                         
-                        # 转换为友好格式: "第34周(手动填写)"
-                        display_name = f"第{week_num}周(手动填写)"
+                        # 转换为友好格式: "第34周(x月x日-x月x日)"
+                        start_date, end_date = get_week_date_range(int(year), int(week_num))
+                        display_name = f"第{week_num}周({start_date}-{end_date})"
                         
                         schedules.append({
                             "filename": week_value,
@@ -1362,8 +1388,7 @@ def api_manual_schedule():
             return jsonify({"success": False, "error": "请求数据不能为空"}), 400
         
         week = data.get('week', '').strip()
-        weekday_data = data.get('weekday_data', [])
-        weekend_data = data.get('weekend_data', [])
+        schedule_data = data.get('schedule_data', [])
         
         if not week:
             return jsonify({"success": False, "error": "请选择排班周次"}), 400
@@ -1371,8 +1396,25 @@ def api_manual_schedule():
         if not is_valid_week_string(week):
             return jsonify({"success": False, "error": "无效的周次格式"}), 400
         
-        if not weekday_data and not weekend_data:
+        if not schedule_data:
             return jsonify({"success": False, "error": "请至少填写一行排班数据"}), 400
+        
+        # 转换数据格式：将统一的schedule_data分类为weekday_data和weekend_data
+        weekday_data = []
+        weekend_data = []
+        
+        for item in schedule_data:
+            # 解析日期以判断是平日还是周末
+            try:
+                date_obj = datetime.strptime(item['date'], '%Y-%m-%d')
+                weekday = date_obj.weekday()  # 0=周一, 6=周日
+                
+                if weekday >= 5:  # 周六(5)或周日(6)
+                    weekend_data.append(item)
+                else:  # 周一到周五
+                    weekday_data.append(item)
+            except ValueError:
+                return jsonify({"success": False, "error": f"无效的日期格式: {item['date']}"}), 400
         
         # 保存到数据库
         save_manual_schedule_data(week, weekday_data, weekend_data)
