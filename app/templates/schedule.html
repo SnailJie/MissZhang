@@ -90,43 +90,117 @@
   background-color: rgba(107, 227, 255, 0.1);
 }
 
-/* 不同日期的背景色 */
-.weekday-0 { /* 周日 */
-  background-color: rgba(255, 99, 132, 0.1) !important; /* 淡红色 */
+/* 一周7天不同的背景色主题 */
+.weekday-0 { /* 周日 - 温暖的红色 */
+  background-color: rgba(255, 99, 132, 0.15) !important;
+  border-left: 4px solid rgba(255, 99, 132, 0.8);
 }
 
-.weekday-1 { /* 周一 */
-  background-color: rgba(54, 162, 235, 0.1) !important; /* 淡蓝色 */
+.weekday-1 { /* 周一 - 清新的蓝色 */
+  background-color: rgba(54, 162, 235, 0.15) !important;
+  border-left: 4px solid rgba(54, 162, 235, 0.8);
 }
 
-.weekday-2 { /* 周二 */
-  background-color: rgba(255, 205, 86, 0.1) !important; /* 淡黄色 */
+.weekday-2 { /* 周二 - 明亮的黄色 */
+  background-color: rgba(255, 205, 86, 0.15) !important;
+  border-left: 4px solid rgba(255, 205, 86, 0.8);
 }
 
-.weekday-3 { /* 周三 */
-  background-color: rgba(75, 192, 192, 0.1) !important; /* 淡青色 */
+.weekday-3 { /* 周三 - 宁静的青色 */
+  background-color: rgba(75, 192, 192, 0.15) !important;
+  border-left: 4px solid rgba(75, 192, 192, 0.8);
 }
 
-.weekday-4 { /* 周四 */
-  background-color: rgba(153, 102, 255, 0.1) !important; /* 淡紫色 */
+.weekday-4 { /* 周四 - 优雅的紫色 */
+  background-color: rgba(153, 102, 255, 0.15) !important;
+  border-left: 4px solid rgba(153, 102, 255, 0.8);
 }
 
-.weekday-5 { /* 周五 */
-  background-color: rgba(255, 159, 64, 0.1) !important; /* 淡橙色 */
+.weekday-5 { /* 周五 - 活力的橙色 */
+  background-color: rgba(255, 159, 64, 0.15) !important;
+  border-left: 4px solid rgba(255, 159, 64, 0.8);
 }
 
-.weekday-6 { /* 周六 */
-  background-color: rgba(201, 203, 207, 0.1) !important; /* 淡灰色 */
+.weekday-6 { /* 周六 - 平静的绿色 */
+  background-color: rgba(75, 201, 146, 0.15) !important;
+  border-left: 4px solid rgba(75, 201, 146, 0.8);
 }
 
-/* hover时保持对应的背景色但稍深一些 */
-.weekday-0:hover { background-color: rgba(255, 99, 132, 0.2) !important; }
-.weekday-1:hover { background-color: rgba(54, 162, 235, 0.2) !important; }
-.weekday-2:hover { background-color: rgba(255, 205, 86, 0.2) !important; }
-.weekday-3:hover { background-color: rgba(75, 192, 192, 0.2) !important; }
-.weekday-4:hover { background-color: rgba(153, 102, 255, 0.2) !important; }
-.weekday-5:hover { background-color: rgba(255, 159, 64, 0.2) !important; }
-.weekday-6:hover { background-color: rgba(201, 203, 207, 0.2) !important; }
+/* hover效果 - 颜色稍深，添加阴影 */
+.weekday-0:hover { 
+  background-color: rgba(255, 99, 132, 0.25) !important; 
+  box-shadow: 0 2px 8px rgba(255, 99, 132, 0.2);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+.weekday-1:hover { 
+  background-color: rgba(54, 162, 235, 0.25) !important; 
+  box-shadow: 0 2px 8px rgba(54, 162, 235, 0.2);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+.weekday-2:hover { 
+  background-color: rgba(255, 205, 86, 0.25) !important; 
+  box-shadow: 0 2px 8px rgba(255, 205, 86, 0.2);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+.weekday-3:hover { 
+  background-color: rgba(75, 192, 192, 0.25) !important; 
+  box-shadow: 0 2px 8px rgba(75, 192, 192, 0.2);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+.weekday-4:hover { 
+  background-color: rgba(153, 102, 255, 0.25) !important; 
+  box-shadow: 0 2px 8px rgba(153, 102, 255, 0.2);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+.weekday-5:hover { 
+  background-color: rgba(255, 159, 64, 0.25) !important; 
+  box-shadow: 0 2px 8px rgba(255, 159, 64, 0.2);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+.weekday-6:hover { 
+  background-color: rgba(75, 201, 146, 0.25) !important; 
+  box-shadow: 0 2px 8px rgba(75, 201, 146, 0.2);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+/* 颜色图例样式 */
+.color-legend .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  padding: 10px 15px;
+}
+
+.color-legend .card-body {
+  padding: 15px;
+}
+
+.legend-item {
+  padding: 8px 12px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 5px;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.legend-text {
+  color: #333;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.legend-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
 
 /* 响应式优化 */
 @media (max-width: 768px) {
@@ -167,19 +241,7 @@
   color: #6be3ff;
 }
 
-/* 星期背景色样式 */
-.weekday-0, /* 周日 */
-.weekday-6 { /* 周六 */
-  background-color: #fff3cd !important; /* 浅黄色 */
-}
 
-.weekday-1, /* 周一 */
-.weekday-2, /* 周二 */
-.weekday-3, /* 周三 */
-.weekday-4, /* 周四 */
-.weekday-5 { /* 周五 */
-  background-color: #d1ecf1 !important; /* 浅蓝色 */
-}
 
 /* 手动填写按钮区域样式 */
 .manual-schedule-section {
@@ -221,6 +283,55 @@
         </div>
       </div>
     </div>
+    
+    <!-- 颜色图例 -->
+    <div class="color-legend mb-4">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0">📅 日期颜色图例</h6>
+        </div>
+        <div class="card-body py-2">
+          <div class="row g-2">
+            <div class="col-6 col-md-3 col-lg">
+              <div class="legend-item weekday-0">
+                <span class="legend-text">周日</span>
+              </div>
+            </div>
+            <div class="col-6 col-md-3 col-lg">
+              <div class="legend-item weekday-1">
+                <span class="legend-text">周一</span>
+              </div>
+            </div>
+            <div class="col-6 col-md-3 col-lg">
+              <div class="legend-item weekday-2">
+                <span class="legend-text">周二</span>
+              </div>
+            </div>
+            <div class="col-6 col-md-3 col-lg">
+              <div class="legend-item weekday-3">
+                <span class="legend-text">周三</span>
+              </div>
+            </div>
+            <div class="col-6 col-md-3 col-lg">
+              <div class="legend-item weekday-4">
+                <span class="legend-text">周四</span>
+              </div>
+            </div>
+            <div class="col-6 col-md-3 col-lg">
+              <div class="legend-item weekday-5">
+                <span class="legend-text">周五</span>
+              </div>
+            </div>
+            <div class="col-6 col-md-3 col-lg">
+              <div class="legend-item weekday-6">
+                <span class="legend-text">周六</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <div id="schedule-content">
       <!-- 排班表内容将通过JavaScript动态生成 -->
       <div class="text-center text-muted">
