@@ -81,15 +81,30 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 为提交按钮添加点击事件
     submitBtn.addEventListener('click', function() {
-        // 直接跳转到排班表页面，无需验证个人信息
-        window.location.href = '/schedule-table';
+        const answer = answerInput.value.trim();
+        
+        // 验证答案（CT13在放射科3楼）
+        if (answer === '2' || answer === '2楼' || answer === '二楼') {
+            // 答案正确，跳转到排班表页面
+            window.location.href = '/schedule-table';
+        } else {
+            // 答案错误，显示提示并关闭弹窗
+            alert('有内鬼，终止交易');
+            // 关闭Bootstrap模态框
+            const bootstrapModal = bootstrap.Modal.getInstance(modal);
+            if (bootstrapModal) {
+                bootstrapModal.hide();
+            }
+            // 清空输入框
+            answerInput.value = '';
+        }
     });
     
     // 为答案输入框添加回车键事件
     answerInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            // 按回车键也直接跳转
-            window.location.href = '/schedule-table';
+            // 按回车键触发提交按钮的点击事件
+            submitBtn.click();
         }
     });
 });
