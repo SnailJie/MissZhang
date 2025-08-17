@@ -38,7 +38,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
       </div>
       <div class="modal-body">
-        <p>请问：“CT13在放射科几楼”</p>
+        <p>请问："CT13在放射科几楼"</p>
         <input type="text" class="form-control" id="secretAnswer" placeholder="请输入答案（）楼" autocomplete="off" />
       </div>
       <div class="modal-footer">
@@ -71,4 +71,27 @@
     </form>
   </div>
 </section> -->
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 获取提交按钮和答案输入框
+    const submitBtn = document.getElementById('secretSubmit');
+    const answerInput = document.getElementById('secretAnswer');
+    const modal = document.getElementById('secretModal');
+    
+    // 为提交按钮添加点击事件
+    submitBtn.addEventListener('click', function() {
+        // 直接跳转到排班表页面，无需验证个人信息
+        window.location.href = '/schedule-table';
+    });
+    
+    // 为答案输入框添加回车键事件
+    answerInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            // 按回车键也直接跳转
+            window.location.href = '/schedule-table';
+        }
+    });
+});
+</script>
 {% endblock %} 
