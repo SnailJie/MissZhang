@@ -128,6 +128,20 @@
 .spinner-border {
   color: #6be3ff;
 }
+
+/* 星期背景色样式 */
+.weekday-0, /* 周日 */
+.weekday-6 { /* 周六 */
+  background-color: #fff3cd !important; /* 浅黄色 */
+}
+
+.weekday-1, /* 周一 */
+.weekday-2, /* 周二 */
+.weekday-3, /* 周三 */
+.weekday-4, /* 周四 */
+.weekday-5 { /* 周五 */
+  background-color: #d1ecf1 !important; /* 浅蓝色 */
+}
 </style>
 {% endblock %}
 
@@ -405,6 +419,128 @@ function renderWeekendScheduleTable(weekendTables) {
   return html;
 }
 
+// 渲染合并的排班表格（以日期为行）
+function renderMergedScheduleTable(tables) {
+  // 首先合并所有表格的数据，按日期重组
+  const mergedData = mergeScheduleData(tables);
+  
+  let html = `
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="mb-0 text-primary">排班安排</h6>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered table-hover">
+            <thead class="table-light">
+              <tr>
+                <th style="min-width: 100px;">日期</th>
+                <th style="min-width: 80px;">班次</th>
+                <th style="min-width: 100px;">岗位</th>
+              </tr>
+            </thead>
+            <tbody>
+  `;
+  
+  // 按日期排序
+  const sortedDates = Object.keys(mergedData).sort();
+  
+  if (sortedDates.length === 0) {
+    html += `
+      <tr>
+        <td colspan="3" class="text-center text-muted">暂无排班数据</td>
+      </tr>
+    `;
+  } else {
+    sortedDates.forEach(date => {
+      const dateData = mergedData[date];
+      const assignments = dateData.assignments;
+      
+      if (assignments.length === 0) {
+        html += `
+          <tr>
+            <td rowspan="1">${date}</td>
+            <td colspan="2" class="text-center text-muted">无排班</td>
+          </tr>
+        `;
+      } else {
+        assignments.forEach((assignment, index) => {
+          // 获取星期几，用于设置背景色
+          const weekdayClass = getWeekdayClass(date);
+          const rowClass = index === 0 ? weekdayClass : '';
+          
+          html += `
+            <tr class="${rowClass}">
+          `;
+          
+          if (index === 0) {
+            html += `<td rowspan="${assignments.length}">${date}</td>`;
+          }
+          
+          html += `
+              <td>${assignment.shift || '-'}</td>
+              <td>${assignment.position || '-'}</td>
+            </tr>
+          `;
+        });
+      }
+    });
+  }
+  
+  html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  return html;
+}
+
+// 合并所有表格数据，按日期重组
+function mergeScheduleData(tables) {
+  const mergedData = {};
+  
+  tables.forEach(table => {
+    // 获取所有日期
+    if (table.dates) {
+      table.dates.forEach(date => {
+        if (!mergedData[date]) {
+          mergedData[date] = {
+            assignments: []
+          };
+        }
+        
+        // 处理每个班次的岗位安排
+        if (table.shifts) {
+          table.shifts.forEach(shift => {
+            const staff = shift.assignments && shift.assignments[date];
+            if (staff && staff !== '-') {
+              // 获取班次类型
+              const shiftType = getShiftType(shift);
+              
+              mergedData[date].assignments.push({
+                shift: shiftType,
+                position: shift.position || '-'
+              });
+            }
+          });
+        }
+      });
+    }
+  });
+  
+  return mergedData;
+}
+
+// 根据日期获取星期几的CSS类
+function getWeekdayClass(dateString) {
+  const date = new Date(dateString);
+  const weekday = date.getDay(); // 0=周日, 1=周一, ..., 6=周六
+  return `weekday-${weekday}`;
+}
+
 // 获取可用的排班文件列表
 async function loadScheduleOptions() {
   try {
@@ -519,27 +655,8 @@ function renderScheduleData(data) {
     `;
   }
   
-  // 分离平日班和周末班
-  const weekdayTables = [];
-  const weekendTables = [];
-  
-  data.tables.forEach(table => {
-    if (table.title.includes('周末') || table.title.includes('补休')) {
-      weekendTables.push(table);
-    } else {
-      weekdayTables.push(table);
-    }
-  });
-  
-  // 渲染平日班表格（新格式）
-  if (weekdayTables.length > 0) {
-    html += renderWeekdayScheduleTable(weekdayTables);
-  }
-  
-  // 渲染周末班表格（新格式）
-  if (weekendTables.length > 0) {
-    html += renderWeekendScheduleTable(weekendTables);
-  }
+  // 使用新的合并表格渲染方式
+  html += renderMergedScheduleTable(data.tables);
   
   return html;
 }
