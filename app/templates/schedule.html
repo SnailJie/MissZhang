@@ -90,117 +90,15 @@
   background-color: rgba(107, 227, 255, 0.1);
 }
 
-/* 一周7天不同的背景色主题 */
-.weekday-0 { /* 周日 - 温暖的红色 */
-  background-color: rgba(255, 99, 132, 0.15) !important;
-  border-left: 4px solid rgba(255, 99, 132, 0.8);
-}
-
-.weekday-1 { /* 周一 - 清新的蓝色 */
-  background-color: rgba(54, 162, 235, 0.15) !important;
-  border-left: 4px solid rgba(54, 162, 235, 0.8);
-}
-
-.weekday-2 { /* 周二 - 明亮的黄色 */
-  background-color: rgba(255, 205, 86, 0.15) !important;
-  border-left: 4px solid rgba(255, 205, 86, 0.8);
-}
-
-.weekday-3 { /* 周三 - 宁静的青色 */
-  background-color: rgba(75, 192, 192, 0.15) !important;
-  border-left: 4px solid rgba(75, 192, 192, 0.8);
-}
-
-.weekday-4 { /* 周四 - 优雅的紫色 */
-  background-color: rgba(153, 102, 255, 0.15) !important;
-  border-left: 4px solid rgba(153, 102, 255, 0.8);
-}
-
-.weekday-5 { /* 周五 - 活力的橙色 */
-  background-color: rgba(255, 159, 64, 0.15) !important;
-  border-left: 4px solid rgba(255, 159, 64, 0.8);
-}
-
-.weekday-6 { /* 周六 - 平静的绿色 */
-  background-color: rgba(75, 201, 146, 0.15) !important;
-  border-left: 4px solid rgba(75, 201, 146, 0.8);
-}
-
-/* hover效果 - 颜色稍深，添加阴影 */
-.weekday-0:hover { 
-  background-color: rgba(255, 99, 132, 0.25) !important; 
-  box-shadow: 0 2px 8px rgba(255, 99, 132, 0.2);
-  transform: translateY(-1px);
-  transition: all 0.2s ease;
-}
-.weekday-1:hover { 
-  background-color: rgba(54, 162, 235, 0.25) !important; 
-  box-shadow: 0 2px 8px rgba(54, 162, 235, 0.2);
-  transform: translateY(-1px);
-  transition: all 0.2s ease;
-}
-.weekday-2:hover { 
-  background-color: rgba(255, 205, 86, 0.25) !important; 
-  box-shadow: 0 2px 8px rgba(255, 205, 86, 0.2);
-  transform: translateY(-1px);
-  transition: all 0.2s ease;
-}
-.weekday-3:hover { 
-  background-color: rgba(75, 192, 192, 0.25) !important; 
-  box-shadow: 0 2px 8px rgba(75, 192, 192, 0.2);
-  transform: translateY(-1px);
-  transition: all 0.2s ease;
-}
-.weekday-4:hover { 
-  background-color: rgba(153, 102, 255, 0.25) !important; 
-  box-shadow: 0 2px 8px rgba(153, 102, 255, 0.2);
-  transform: translateY(-1px);
-  transition: all 0.2s ease;
-}
-.weekday-5:hover { 
-  background-color: rgba(255, 159, 64, 0.25) !important; 
-  box-shadow: 0 2px 8px rgba(255, 159, 64, 0.2);
-  transform: translateY(-1px);
-  transition: all 0.2s ease;
-}
-.weekday-6:hover { 
-  background-color: rgba(75, 201, 146, 0.25) !important; 
-  box-shadow: 0 2px 8px rgba(75, 201, 146, 0.2);
-  transform: translateY(-1px);
-  transition: all 0.2s ease;
-}
-
-/* 颜色图例样式 */
-.color-legend .card-header {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
-  padding: 10px 15px;
-}
-
-.color-legend .card-body {
-  padding: 15px;
-}
-
-.legend-item {
-  padding: 8px 12px;
-  border-radius: 6px;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 5px;
-  transition: all 0.2s ease;
-  cursor: default;
-}
-
-.legend-text {
-  color: #333;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-}
-
-.legend-item:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
+/* 日期行背景色 - 轮换不同颜色 */
+.date-color-0 { background-color: rgba(255, 99, 132, 0.1) !important; }
+.date-color-1 { background-color: rgba(54, 162, 235, 0.1) !important; }
+.date-color-2 { background-color: rgba(255, 205, 86, 0.1) !important; }
+.date-color-3 { background-color: rgba(75, 192, 192, 0.1) !important; }
+.date-color-4 { background-color: rgba(153, 102, 255, 0.1) !important; }
+.date-color-5 { background-color: rgba(255, 159, 64, 0.1) !important; }
+.date-color-6 { background-color: rgba(199, 199, 199, 0.1) !important; }
+.date-color-7 { background-color: rgba(83, 102, 255, 0.1) !important; }
 
 /* 响应式优化 */
 @media (max-width: 768px) {
@@ -284,53 +182,7 @@
       </div>
     </div>
     
-    <!-- 颜色图例 -->
-    <div class="color-legend mb-4">
-      <div class="card">
-        <div class="card-header">
-          <h6 class="mb-0">📅 日期颜色图例</h6>
-        </div>
-        <div class="card-body py-2">
-          <div class="row g-2">
-            <div class="col-6 col-md-3 col-lg">
-              <div class="legend-item weekday-0">
-                <span class="legend-text">周日</span>
-              </div>
-            </div>
-            <div class="col-6 col-md-3 col-lg">
-              <div class="legend-item weekday-1">
-                <span class="legend-text">周一</span>
-              </div>
-            </div>
-            <div class="col-6 col-md-3 col-lg">
-              <div class="legend-item weekday-2">
-                <span class="legend-text">周二</span>
-              </div>
-            </div>
-            <div class="col-6 col-md-3 col-lg">
-              <div class="legend-item weekday-3">
-                <span class="legend-text">周三</span>
-              </div>
-            </div>
-            <div class="col-6 col-md-3 col-lg">
-              <div class="legend-item weekday-4">
-                <span class="legend-text">周四</span>
-              </div>
-            </div>
-            <div class="col-6 col-md-3 col-lg">
-              <div class="legend-item weekday-5">
-                <span class="legend-text">周五</span>
-              </div>
-            </div>
-            <div class="col-6 col-md-3 col-lg">
-              <div class="legend-item weekday-6">
-                <span class="legend-text">周六</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+
     
     <div id="schedule-content">
       <!-- 排班表内容将通过JavaScript动态生成 -->
@@ -633,20 +485,20 @@ function renderMergedScheduleTable(tables) {
       const assignments = dateData.assignments;
       
       if (assignments.length === 0) {
-        const weekdayClass = getWeekdayClass(date);
+        const dateColorClass = getDateColorClass(date, sortedDates);
         html += `
-          <tr class="${weekdayClass}">
+          <tr class="${dateColorClass}">
             <td rowspan="1">${date}</td>
             <td colspan="2" class="text-center text-muted">无排班</td>
           </tr>
         `;
       } else {
         assignments.forEach((assignment, index) => {
-          // 获取星期几，用于设置背景色（所有同日期的行都应该有相同背景色）
-          const weekdayClass = getWeekdayClass(date);
+          // 获取日期颜色类，同一日期的所有行都使用相同背景色
+          const dateColorClass = getDateColorClass(date, sortedDates);
           
           html += `
-            <tr class="${weekdayClass}">
+            <tr class="${dateColorClass}">
           `;
           
           if (index === 0) {
@@ -710,11 +562,11 @@ function mergeScheduleData(tables) {
   return mergedData;
 }
 
-// 根据日期获取星期几的CSS类
-function getWeekdayClass(dateString) {
-  const date = new Date(dateString);
-  const weekday = date.getDay(); // 0=周日, 1=周一, ..., 6=周六
-  return `weekday-${weekday}`;
+// 根据日期在列表中的索引获取颜色CSS类
+function getDateColorClass(dateString, sortedDates) {
+  const dateIndex = sortedDates.indexOf(dateString);
+  const colorIndex = dateIndex % 8; // 轮换8种颜色
+  return `date-color-${colorIndex}`;
 }
 
 // 获取可用的排班文件列表
