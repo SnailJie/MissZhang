@@ -280,64 +280,93 @@ function renderScheduleData(data) {
     `;
   }
   
+  // 分离平日班和周末班
+  const weekdayTables = [];
+  const weekendTables = [];
+  
   data.tables.forEach(table => {
+    if (table.title.includes('周末') || table.title.includes('补休')) {
+      weekendTables.push(table);
+    } else {
+      weekdayTables.push(table);
+    }
+  });
+  
+  // 渲染平日班表格
+  if (weekdayTables.length > 0) {
+    html += `<h6 class="mb-3 text-primary">平日班</h6>`;
+    weekdayTables.forEach(table => {
+      html += renderSingleTable(table, 'primary');
+    });
+  }
+  
+  // 渲染周末班表格
+  if (weekendTables.length > 0) {
+    html += `<h6 class="mb-3 text-success mt-4">周末班</h6>`;
+    weekendTables.forEach(table => {
+      html += renderSingleTable(table, 'success');
+    });
+  }
+  
+  return html;
+}
+
+// 渲染单个表格（移除时间列）
+function renderSingleTable(table, themeColor) {
+  let html = `
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="mb-0 text-${themeColor}">${table.title}</h6>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered table-hover">
+            <thead class="table-light">
+              <tr>
+                <th style="min-width: 80px;">岗位</th>
+  `;
+  
+  // 添加日期列
+  table.dates.forEach(date => {
+    html += `<th class="text-center" style="min-width: 80px;">${date}</th>`;
+  });
+  
+  html += `
+              </tr>
+            </thead>
+            <tbody>
+  `;
+  
+  // 添加排班行（移除时间列）
+  table.shifts.forEach(shift => {
     html += `
-      <div class="card mb-4">
-        <div class="card-header">
-          <h6 class="mb-0 text-primary">${table.title}</h6>
-        </div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-sm table-bordered table-hover">
-              <thead class="table-light">
-                <tr>
-                  <th style="min-width: 80px;">岗位</th>
-                  <th style="min-width: 120px;">时间</th>
+      <tr>
+        <td class="fw-bold">${shift.position}</td>
     `;
     
-    // 添加日期列
+    // 添加每天的排班人员
     table.dates.forEach(date => {
-      html += `<th class="text-center" style="min-width: 80px;">${date}</th>`;
+      const staff = shift.assignments[date] || '-';
+      html += `<td class="text-center">${staff}</td>`;
     });
     
-    html += `
-                </tr>
-              </thead>
-              <tbody>
-    `;
-    
-    // 添加排班行
-    table.shifts.forEach(shift => {
-      html += `
-        <tr>
-          <td class="fw-bold">${shift.position}</td>
-          <td class="text-muted">${shift.time_range}</td>
-      `;
-      
-      // 添加每天的排班人员
-      table.dates.forEach(date => {
-        const staff = shift.assignments[date] || '-';
-        html += `<td class="text-center">${staff}</td>`;
-      });
-      
-      html += '</tr>';
-    });
-    
-    html += `
-              </tbody>
-            </table>
-          </div>
+    html += '</tr>';
+  });
+  
+  html += `
+            </tbody>
+          </table>
         </div>
       </div>
-    `;
-  });
+    </div>
+  `;
   
   return html;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   // 检查用户是否已设置姓名
-  checkUserName();
+  // checkUserName();
   
   const select = document.getElementById('schedule-select');
   
@@ -379,15 +408,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 检查用户姓名是否已设置
 function checkUserName() {
-  // 从模板变量获取用户信息
-  const userInfo = {{ user_info | tojson | safe }};
-  
-  // 检查姓名是否为空或未设置
-  if (!userInfo || !userInfo.name || userInfo.name.trim() === '') {
-    // 显示弹窗
-    const modal = new bootstrap.Modal(document.getElementById('nameCheckModal'));
-    modal.show();
-  }
+  // 从API或其他方式获取用户信息，这里暂时跳过检查
+  // TODO: 需要通过API获取用户信息
+  console.log('用户姓名检查已跳过');
 }
 </script>
 {% endblock %} 
