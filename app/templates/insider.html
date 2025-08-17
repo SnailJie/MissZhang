@@ -367,23 +367,18 @@ function initializeApp() {
   }
 
   // 为所有包含文件上传的表单添加验证
-  const allForms = document.querySelectorAll('form[method="post"]');
-  allForms.forEach(form => {
-    form.addEventListener('submit', function(e) {
-      // 验证文件大小
-      const fileInput = form.querySelector('input[type="file"]');
-      if (!validateFileSize(fileInput)) {
-        e.preventDefault();
-        return;
-      }
-    });
-  });
-
-  // 为所有POST表单添加提交处理
+  // 统一的表单提交处理器（合并文件大小验证和提交处理）
   const allPostForms = document.querySelectorAll('form[method="post"]');
   allPostForms.forEach((form, index) => {
     form.addEventListener('submit', function(e) {
       e.preventDefault(); // 阻止默认提交行为
+      
+      // 首先验证文件大小
+      const fileInput = form.querySelector('input[type="file"]');
+      if (!validateFileSize(fileInput)) {
+        // 如果文件大小验证失败，直接返回，不执行后续逻辑
+        return;
+      }
       
       // 区分是替换图片表单还是上传新图片表单
       const isReplaceForm = form.querySelector('input[type="hidden"][name="week"]') !== null;

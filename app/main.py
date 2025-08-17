@@ -626,6 +626,139 @@ def wechat_message():
         return "success"
 
 
+# ---------- WeChat Menu Management Routes ----------
+
+@app.route("/wechat/menu/create", methods=["POST"])
+def create_wechat_menu():
+    """创建微信公众号自定义菜单"""
+    try:
+        print("[菜单管理] 开始创建微信自定义菜单")
+        
+        # 检查是否已配置微信
+        if not wechat_config.is_configured:
+            return jsonify({
+                "success": False, 
+                "message": "微信配置未完成，请先配置WECHAT_APP_ID和WECHAT_APP_SECRET"
+            }), 400
+        
+        # 从请求中获取自定义菜单数据（可选）
+        menu_data = None
+        if request.is_json:
+            data = request.get_json()
+            menu_data = data.get('menu_data') if data else None
+        
+        # 创建菜单
+        success = wechat_service.create_custom_menu(menu_data)
+        
+        if success:
+            print("[菜单管理] 微信自定义菜单创建成功")
+            return jsonify({
+                "success": True,
+                "message": "自定义菜单创建成功，菜单将在24小时内生效"
+            })
+        else:
+            print("[菜单管理] 微信自定义菜单创建失败")
+            return jsonify({
+                "success": False,
+                "message": "创建自定义菜单失败，请检查微信配置和网络连接"
+            }), 500
+            
+    except Exception as e:
+        print(f"[菜单管理] 创建微信自定义菜单异常: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "message": f"创建菜单异常: {str(e)}"
+        }), 500
+
+
+@app.route("/wechat/menu/get", methods=["GET"])
+def get_wechat_menu():
+    """获取当前微信公众号自定义菜单"""
+    try:
+        print("[菜单管理] 开始获取微信自定义菜单")
+        
+        # 检查是否已配置微信
+        if not wechat_config.is_configured:
+            return jsonify({
+                "success": False, 
+                "message": "微信配置未完成，请先配置WECHAT_APP_ID和WECHAT_APP_SECRET"
+            }), 400
+        
+        # 获取菜单
+        menu_info = wechat_service.get_custom_menu()
+        
+        if menu_info:
+            print("[菜单管理] 成功获取微信自定义菜单")
+            return jsonify({
+                "success": True,
+                "message": "获取自定义菜单成功",
+                "data": menu_info
+            })
+        else:
+            print("[菜单管理] 获取微信自定义菜单失败或菜单不存在")
+            return jsonify({
+                "success": False,
+                "message": "获取自定义菜单失败或菜单不存在"
+            }), 404
+            
+    except Exception as e:
+        print(f"[菜单管理] 获取微信自定义菜单异常: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "message": f"获取菜单异常: {str(e)}"
+        }), 500
+
+
+@app.route("/wechat/menu/delete", methods=["POST"])
+def delete_wechat_menu():
+    """删除微信公众号自定义菜单"""
+    try:
+        print("[菜单管理] 开始删除微信自定义菜单")
+        
+        # 检查是否已配置微信
+        if not wechat_config.is_configured:
+            return jsonify({
+                "success": False, 
+                "message": "微信配置未完成，请先配置WECHAT_APP_ID和WECHAT_APP_SECRET"
+            }), 400
+        
+        # 删除菜单
+        success = wechat_service.delete_custom_menu()
+        
+        if success:
+            print("[菜单管理] 微信自定义菜单删除成功")
+            return jsonify({
+                "success": True,
+                "message": "自定义菜单删除成功，菜单将在24小时内消失"
+            })
+        else:
+            print("[菜单管理] 微信自定义菜单删除失败")
+            return jsonify({
+                "success": False,
+                "message": "删除自定义菜单失败，请检查微信配置和网络连接"
+            }), 500
+            
+    except Exception as e:
+        print(f"[菜单管理] 删除微信自定义菜单异常: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "message": f"删除菜单异常: {str(e)}"
+        }), 500
+
+
+@app.route("/wechat/menu")
+def wechat_menu_management():
+    """微信菜单管理页面"""
+    return render_template("wechat_menu.html", 
+                         wechat_configured=wechat_config.is_configured)
+
+
 def save_or_update_user(user_info: Dict[str, Any]) -> int:
     """保存或更新用户信息，返回用户ID"""
     try:

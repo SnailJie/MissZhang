@@ -27,6 +27,9 @@ class WeChatConfig:
         self.access_token_url = f'{self.base_url}/cgi-bin/token'
         self.user_info_url = f'{self.base_url}/cgi-bin/user/info'
         self.custom_message_url = f'{self.base_url}/cgi-bin/message/custom/send'
+        self.menu_create_url = f'{self.base_url}/cgi-bin/menu/create'
+        self.menu_get_url = f'{self.base_url}/cgi-bin/menu/get'
+        self.menu_delete_url = f'{self.base_url}/cgi-bin/menu/delete'
         
         # 网页授权配置
         self.redirect_uri = os.getenv('WECHAT_REDIRECT_URI', '')
@@ -68,6 +71,18 @@ class WeChatConfig:
         if next_openid:
             url += f'&next_openid={next_openid}'
         return url
+    
+    def get_menu_create_url(self, access_token: str) -> str:
+        """获取创建自定义菜单接口URL"""
+        return f'{self.menu_create_url}?access_token={access_token}'
+    
+    def get_menu_get_url(self, access_token: str) -> str:
+        """获取自定义菜单接口URL"""
+        return f'{self.menu_get_url}?access_token={access_token}'
+    
+    def get_menu_delete_url(self, access_token: str) -> str:
+        """删除自定义菜单接口URL"""
+        return f'{self.menu_delete_url}?access_token={access_token}'
     
     @classmethod
     def generate_session_id(cls, openid: str, timestamp: int = None) -> str:

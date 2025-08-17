@@ -235,3 +235,117 @@ class WeChatService:
         }
         
         return profile
+    
+    def create_custom_menu(self, menu_data: Dict = None) -> bool:
+        """创建自定义菜单"""
+        print(f"[微信服务] 开始创建自定义菜单")
+        
+        access_token = self.get_access_token()
+        if not access_token:
+            print(f"[微信服务] 无法获取access_token，无法创建自定义菜单")
+            return False
+        
+        try:
+            url = self.config.get_menu_create_url(access_token)
+            print(f"[微信服务] 创建自定义菜单URL: {url}")
+            
+            # 如果没有提供菜单数据，使用默认的"放射小张"菜单
+            if menu_data is None:
+                menu_data = self.get_default_menu_data()
+            
+            print(f"[微信服务] 菜单数据: {json.dumps(menu_data, ensure_ascii=False, indent=2)}")
+            
+            response = requests.post(url, json=menu_data)
+            print(f"[微信服务] 创建菜单响应状态码: {response.status_code}")
+            
+            result = response.json()
+            print(f"[微信服务] 创建菜单响应结果: {result}")
+            
+            if result.get('errcode') == 0:
+                print(f"[微信服务] 自定义菜单创建成功")
+                return True
+            else:
+                print(f"[微信服务] 创建自定义菜单失败: {result}")
+                return False
+                
+        except Exception as e:
+            print(f"[微信服务] 创建自定义菜单异常: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def get_default_menu_data(self) -> Dict:
+        """获取默认菜单数据 - 放射小张"""
+        return {
+            "button": [
+                {
+                    "type": "view",
+                    "name": "放射小张",
+                    "url": "https://www.wuyinxinghai.cn"
+                }
+            ]
+        }
+    
+    def get_custom_menu(self) -> Optional[Dict]:
+        """获取当前自定义菜单"""
+        print(f"[微信服务] 开始获取当前自定义菜单")
+        
+        access_token = self.get_access_token()
+        if not access_token:
+            print(f"[微信服务] 无法获取access_token，无法获取自定义菜单")
+            return None
+        
+        try:
+            url = self.config.get_menu_get_url(access_token)
+            print(f"[微信服务] 获取自定义菜单URL: {url}")
+            
+            response = requests.get(url)
+            print(f"[微信服务] 获取菜单响应状态码: {response.status_code}")
+            
+            result = response.json()
+            print(f"[微信服务] 获取菜单响应结果: {result}")
+            
+            if 'menu' in result:
+                print(f"[微信服务] 成功获取自定义菜单")
+                return result
+            else:
+                print(f"[微信服务] 获取自定义菜单失败: {result}")
+                return None
+                
+        except Exception as e:
+            print(f"[微信服务] 获取自定义菜单异常: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    def delete_custom_menu(self) -> bool:
+        """删除自定义菜单"""
+        print(f"[微信服务] 开始删除自定义菜单")
+        
+        access_token = self.get_access_token()
+        if not access_token:
+            print(f"[微信服务] 无法获取access_token，无法删除自定义菜单")
+            return False
+        
+        try:
+            url = self.config.get_menu_delete_url(access_token)
+            print(f"[微信服务] 删除自定义菜单URL: {url}")
+            
+            response = requests.get(url)
+            print(f"[微信服务] 删除菜单响应状态码: {response.status_code}")
+            
+            result = response.json()
+            print(f"[微信服务] 删除菜单响应结果: {result}")
+            
+            if result.get('errcode') == 0:
+                print(f"[微信服务] 自定义菜单删除成功")
+                return True
+            else:
+                print(f"[微信服务] 删除自定义菜单失败: {result}")
+                return False
+                
+        except Exception as e:
+            print(f"[微信服务] 删除自定义菜单异常: {e}")
+            import traceback
+            traceback.print_exc()
+            return False

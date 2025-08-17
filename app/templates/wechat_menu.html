@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微信菜单管理 - Miss Zhang</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .menu-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .menu-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            margin: 0.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        .alert {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .menu-preview {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .menu-button {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            margin: 0.25rem;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #333;
+        }
+        
+        .loading {
+            display: none;
+            color: #007bff;
+            font-style: italic;
+        }
+        
+        .config-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-brand">
+                <h1><a href="{{ url_for('index') }}">Miss Zhang</a></h1>
+            </div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('index') }}">首页</a></li>
+                <li><a href="{{ url_for('schedule') }}">排班表</a></li>
+                <li><a href="{{ url_for('wechat_login') }}">微信登录</a></li>
+                <li><a href="{{ url_for('wechat_menu_management') }}" class="active">菜单管理</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="menu-container">
+        <h2>微信公众号菜单管理</h2>
+        
+        {% if not wechat_configured %}
+        <div class="config-warning">
+            <h3>⚠️ 微信配置未完成</h3>
+            <p>请在环境变量中配置以下参数才能使用菜单管理功能：</p>
+            <ul>
+                <li><code>WECHAT_APP_ID</code> - 微信公众号的AppID</li>
+                <li><code>WECHAT_APP_SECRET</code> - 微信公众号的AppSecret</li>
+            </ul>
+        </div>
+        {% endif %}
+
+        <div id="alert-container"></div>
+
+        <div class="menu-section">
+            <h3>当前菜单配置</h3>
+            <p>默认菜单包含一个名为"放射小张"的按钮，点击后跳转到 <code>https://www.wuyinxinghai.cn</code></p>
+            
+            <div class="menu-preview">
+                <h4>菜单预览：</h4>
+                <div class="menu-button">📱 放射小张</div>
+                <p><small>点击后跳转到：https://www.wuyinxinghai.cn</small></p>
+            </div>
+
+            <div style="margin-top: 1.5rem;">
+                <button class="btn btn-secondary" onclick="getCurrentMenu()" {% if not wechat_configured %}disabled{% endif %}>
+                    🔍 获取当前菜单
+                </button>
+                <span class="loading" id="get-loading">正在获取...</span>
+            </div>
+
+            <div id="current-menu" style="margin-top: 1rem;"></div>
+        </div>
+
+        <div class="menu-section">
+            <h3>菜单操作</h3>
+            <p>创建或更新微信公众号的自定义菜单。菜单配置生效需要24小时，请耐心等待。</p>
+            
+            <div style="margin-top: 1rem;">
+                <button class="btn btn-primary" onclick="createMenu()" {% if not wechat_configured %}disabled{% endif %}>
+                    ✅ 创建/更新菜单
+                </button>
+                <span class="loading" id="create-loading">正在创建...</span>
+            </div>
+
+            <div style="margin-top: 1rem;">
+                <button class="btn btn-danger" onclick="deleteMenu()" {% if not wechat_configured %}disabled{% endif %}>
+                    ❌ 删除菜单
+                </button>
+                <span class="loading" id="delete-loading">正在删除...</span>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <h3>说明</h3>
+            <ul>
+                <li>微信自定义菜单最多支持3个一级菜单，每个一级菜单最多5个子菜单</li>
+                <li>菜单名称最长4个汉字</li>
+                <li>菜单创建或删除后，需要24小时才能生效</li>
+                <li>view类型菜单支持跳转到外部链接</li>
+                <li>公众号必须是已认证的服务号才能使用自定义菜单功能</li>
+            </ul>
+        </div>
+    </main>
+
+    <script>
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alert-container');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = message;
+            
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        async function createMenu() {
+            const createBtn = document.querySelector('button[onclick="createMenu()"]');
+            const loading = document.getElementById('create-loading');
+            
+            createBtn.disabled = true;
+            loading.style.display = 'inline';
+            
+            try {
+                const response = await fetch('/wechat/menu/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('✅ ' + result.message, 'success');
+                } else {
+                    showAlert('❌ ' + result.message, 'danger');
+                }
+            } catch (error) {
+                showAlert('❌ 网络错误：' + error.message, 'danger');
+            } finally {
+                createBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        async function deleteMenu() {
+            if (!confirm('确定要删除自定义菜单吗？删除后需要24小时才能生效。')) {
+                return;
+            }
+            
+            const deleteBtn = document.querySelector('button[onclick="deleteMenu()"]');
+            const loading = document.getElementById('delete-loading');
+            
+            deleteBtn.disabled = true;
+            loading.style.display = 'inline';
+            
+            try {
+                const response = await fetch('/wechat/menu/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('✅ ' + result.message, 'success');
+                    document.getElementById('current-menu').innerHTML = '';
+                } else {
+                    showAlert('❌ ' + result.message, 'danger');
+                }
+            } catch (error) {
+                showAlert('❌ 网络错误：' + error.message, 'danger');
+            } finally {
+                deleteBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        async function getCurrentMenu() {
+            const getBtn = document.querySelector('button[onclick="getCurrentMenu()"]');
+            const loading = document.getElementById('get-loading');
+            const menuDiv = document.getElementById('current-menu');
+            
+            getBtn.disabled = true;
+            loading.style.display = 'inline';
+            
+            try {
+                const response = await fetch('/wechat/menu/get');
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('✅ ' + result.message, 'success');
+                    menuDiv.innerHTML = '<h4>当前菜单数据：</h4><pre>' + JSON.stringify(result.data, null, 2) + '</pre>';
+                } else {
+                    showAlert('ℹ️ ' + result.message, 'warning');
+                    menuDiv.innerHTML = '<p>暂无菜单数据</p>';
+                }
+            } catch (error) {
+                showAlert('❌ 网络错误：' + error.message, 'danger');
+                menuDiv.innerHTML = '';
+            } finally {
+                getBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
