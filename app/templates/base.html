@@ -29,6 +29,10 @@
                href="/" {% if request.path.startswith('/index') %}aria-current="page"{% endif %}>首页</a>
           </li>
           <li class="nav-item">
+            <a class="nav-link {% if request.path.startswith('/schedule') %}active{% endif %}"
+               href="/schedule" {% if request.path.startswith('/schedule') %}aria-current="page"{% endif %}>我的排班</a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link {% if request.path.startswith('/about') %}active{% endif %}"
                href="/about" {% if request.path.startswith('/about') %}aria-current="page"{% endif %}>关于小张</a>
           </li>

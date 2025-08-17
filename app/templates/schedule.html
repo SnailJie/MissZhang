@@ -111,6 +111,11 @@
   .table-responsive {
     font-size: 14px;
   }
+  
+  /* 移动端按钮区域优化 */
+  .col-md-4.d-flex.align-items-end {
+    margin-top: 1rem;
+  }
 }
 
 /* 加载和提示样式 */
@@ -131,10 +136,21 @@
   <div class="container schedule-container">
     <h1>我的排班</h1>
     <div class="schedule-controls">
-      <label for="schedule-select">选择排班周次：</label>
-      <select id="schedule-select" name="schedule-select">
-        <option value="">正在加载...</option>
-      </select>
+      <div class="row g-3">
+        <div class="col-12 col-md-8">
+          <label for="schedule-select">选择排班周次：</label>
+          <select id="schedule-select" name="schedule-select">
+            <option value="">正在加载...</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-4 d-flex align-items-end">
+          <div class="d-grid gap-2 w-100">
+            <a href="{{ url_for('manual_schedule') }}" class="btn btn-success">
+              ✏️ 手动填写
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="schedule-content">
       <!-- 排班表内容将通过JavaScript动态生成 -->
