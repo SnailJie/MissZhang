@@ -127,11 +127,11 @@
           </div>
           <div class="col-12 col-md-6 d-flex align-items-end">
             <div class="d-grid gap-2 w-100">
-              <button type="button" class="btn btn-primary" id="viewScheduleBtn">
+              <!-- <button type="button" class="btn btn-primary" id="viewScheduleBtn">
                 🔍 查看我的排班
-              </button>
+              </button> -->
               <a href="{{ url_for('schedule_table') }}" class="btn btn-secondary">
-                📋 查看全部排班
+                📋 查看排班详情
               </a>
             </div>
           </div>
@@ -179,6 +179,9 @@
                   <button class="btn btn-outline-secondary" type="button" id="refreshPostBtn">
                     🔄
                   </button>
+                </div>
+                <div class="form-text">
+                  ℹ️ 选择任意周次，文件将自动重命名为对应的时间格式
                 </div>
               </div>
               <div class="col-12">
@@ -229,17 +232,17 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeApp() {
   console.log('开始初始化应用...');
   
-  // 获取排班数据并填充下拉框
-  function loadScheduleOptions() {
-    console.log('开始加载排班选项...');
-    fetch('/api/schedules')
+  // 获取周次选项并填充下拉框
+  function loadWeekOptions() {
+    console.log('开始加载周次选项...');
+    fetch('/api/week-options')
       .then(response => {
         console.log('API响应状态:', response.status);
         return response.json();
       })
       .then(data => {
-        console.log('获取到的排班数据:', data);
-        const schedules = data.schedules;
+        console.log('获取到的周次选项:', data);
+        const weekOptions = data.week_options;
         const weekSelect = document.getElementById('week');
         const weekPostSelect = document.getElementById('weekPost');
         
@@ -252,33 +255,33 @@ function initializeApp() {
         weekSelect.innerHTML = '<option value="">请选择排班周次</option>';
         weekPostSelect.innerHTML = '<option value="">请选择排班周次</option>';
         
-        // 添加排班选项
-        schedules.forEach(schedule => {
-          const option = document.createElement('option');
-          option.value = schedule.filename;
-          option.textContent = schedule.display_name;
+        // 添加周次选项
+        weekOptions.forEach(option => {
+          const optionElement = document.createElement('option');
+          optionElement.value = option.value;
+          optionElement.textContent = option.label;
           
           // 如果当前选中的周次匹配，则设置为选中状态
-          if (schedule.filename === '{{ week or "" }}') {
-            option.selected = true;
+          if (option.value === '{{ week or "" }}') {
+            optionElement.selected = true;
           }
           
-          weekSelect.appendChild(option.cloneNode(true));
-          weekPostSelect.appendChild(option);
+          weekSelect.appendChild(optionElement.cloneNode(true));
+          weekPostSelect.appendChild(optionElement);
         });
         
         // 如果没有匹配的周次，尝试设置默认值
-        if (!('{{ week or "" }}' && schedules.some(s => s.filename === '{{ week or "" }}'))) {
-          if (schedules.length > 0) {
-            weekSelect.value = schedules[0].filename;
-            weekPostSelect.value = schedules[0].filename;
+        if (!('{{ week or "" }}' && weekOptions.some(o => o.value === '{{ week or "" }}'))) {
+          if (weekOptions.length > 0) {
+            weekSelect.value = weekOptions[0].value;
+            weekPostSelect.value = weekOptions[0].value;
           }
         }
         
-        console.log('排班选项加载完成');
+        console.log('周次选项加载完成');
       })
       .catch(error => {
-        console.error('加载排班数据失败:', error);
+        console.error('加载周次选项失败:', error);
         // 显示错误提示
         const weekSelect = document.getElementById('week');
         const weekPostSelect = document.getElementById('weekPost');
@@ -291,7 +294,7 @@ function initializeApp() {
   }
   
   // 初始化加载
-  loadScheduleOptions();
+  loadWeekOptions();
   
   // 刷新按钮事件
   const refreshPostBtn = document.getElementById('refreshPostBtn');
@@ -300,7 +303,7 @@ function initializeApp() {
     refreshPostBtn.addEventListener('click', function(e) {
       e.preventDefault();
       console.log('刷新按钮被点击');
-      loadScheduleOptions();
+      loadWeekOptions();
     });
   }
   
@@ -314,8 +317,37 @@ function initializeApp() {
         alert('请选择排班周次');
         return;
       }
-      console.log('提交的周次:', weekPostSelect.value);
+      
+      // 验证周次格式
+      const weekValue = weekPostSelect.value;
+      if (!/^\d{4}-W\d{2}$/.test(weekValue)) {
+        e.preventDefault();
+        alert('请选择有效的周次格式');
+        return;
+      }
+      
+      console.log('提交的周次:', weekValue);
+      
+      // 显示确认信息
+      const selectedOption = weekPostSelect.options[weekPostSelect.selectedIndex];
+      const confirmMsg = `确认上传排班表到：${selectedOption.textContent}？\n文件将保存为：${weekValue}-MMDD-MMDD.${getFileExtension()}`;
+      
+      if (!confirm(confirmMsg)) {
+        e.preventDefault();
+        return;
+      }
     });
+  }
+  
+  // 获取文件扩展名的辅助函数
+  function getFileExtension() {
+    const fileInput = document.getElementById('image');
+    if (fileInput && fileInput.files.length > 0) {
+      const fileName = fileInput.files[0].name;
+      const ext = fileName.split('.').pop().toLowerCase();
+      return ext;
+    }
+    return 'jpg'; // 默认扩展名
   }
   
   // 查看按钮点击事件 - 使用多种方法确保绑定成功

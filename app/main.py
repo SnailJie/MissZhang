@@ -818,6 +818,89 @@ def get_current_week_str() -> str:
     return f"{iso_year}-W{iso_week:02d}"
 
 
+def generate_week_options(num_weeks_back: int = 52, num_weeks_forward: int = 52) -> List[Dict[str, str]]:
+    """生成周次选项列表，包括过去和未来的周次
+    
+    Args:
+        num_weeks_back: 向前生成的周数（默认52周，约1年）
+        num_weeks_forward: 向后生成的周数（默认52周，约1年）
+    
+    Returns:
+        包含周次信息的字典列表，每个字典包含：
+        - value: 周次值，如 "2025-W32"
+        - label: 显示标签，如 "2025年第32周 (08月11日-08月17日)"
+        - filename: 文件名格式，如 "2025-W32-0811-0817"
+    """
+    from datetime import timedelta
+    
+    today = date.today()
+    current_iso_year, current_iso_week, _ = today.isocalendar()
+    
+    week_options = []
+    
+    # 生成过去的周次
+    for i in range(num_weeks_back, 0, -1):
+        target_date = today - timedelta(weeks=i)
+        iso_year, iso_week, _ = target_date.isocalendar()
+        
+        # 计算该周的开始和结束日期
+        start_of_week = target_date - timedelta(days=target_date.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+        
+        # 生成文件名格式：2025-W32-0811-0817
+        start_str = start_of_week.strftime("%m%d")
+        end_str = end_of_week.strftime("%m%d")
+        filename = f"{iso_year}-W{iso_week:02d}-{start_str}-{end_str}"
+        
+        # 生成显示标签
+        label = f"{iso_year}年第{iso_week:02d}周 ({start_of_week.strftime('%m月%d日')}-{end_of_week.strftime('%m月%d日')})"
+        
+        week_options.append({
+            "value": f"{iso_year}-W{iso_week:02d}",
+            "label": label,
+            "filename": filename
+        })
+    
+    # 添加当前周
+    start_of_current_week = today - timedelta(days=today.weekday())
+    end_of_current_week = start_of_current_week + timedelta(days=6)
+    start_str = start_of_current_week.strftime("%m%d")
+    end_str = end_of_current_week.strftime("%m%d")
+    current_filename = f"{current_iso_year}-W{current_iso_week:02d}-{start_str}-{end_str}"
+    current_label = f"{current_iso_year}年第{current_iso_week:02d}周 ({start_of_current_week.strftime('%m月%d日')}-{end_of_current_week.strftime('%m月%d日')}) [当前]"
+    
+    week_options.append({
+        "value": f"{current_iso_year}-W{current_iso_week:02d}",
+        "label": current_label,
+        "filename": current_filename
+    })
+    
+    # 生成未来的周次
+    for i in range(1, num_weeks_forward + 1):
+        target_date = today + timedelta(weeks=i)
+        iso_year, iso_week, _ = target_date.isocalendar()
+        
+        # 计算该周的开始和结束日期
+        start_of_week = target_date - timedelta(days=target_date.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+        
+        # 生成文件名格式：2025-W32-0811-0817
+        start_str = start_of_week.strftime("%m%d")
+        end_str = end_of_week.strftime("%m%d")
+        filename = f"{iso_year}-W{iso_week:02d}-{start_str}-{end_str}"
+        
+        # 生成显示标签
+        label = f"{iso_year}年第{iso_week:02d}周 ({start_of_week.strftime('%m月%d日')}-{end_of_week.strftime('%m月%d日')})"
+        
+        week_options.append({
+            "value": f"{iso_year}-W{iso_week:02d}",
+            "label": label,
+            "filename": filename
+        })
+    
+    return week_options
+
+
 def is_valid_week_string(week_str: str) -> bool:
     # HTML input type="week" yields like "2025-W03"
     return bool(re.fullmatch(r"\d{4}-W\d{2}", week_str))
@@ -894,17 +977,35 @@ def insider():
                 user_info=user_info
             )
 
-        # Save as {week}.{ext}
-        # Remove any old files for this week to keep a single source of truth
+        # 根据选择的周次生成文件名
+        week_options = generate_week_options()
+        selected_week = None
+        
+        # 查找匹配的周次选项
+        for option in week_options:
+            if option["value"] == week_str:
+                selected_week = option
+                break
+        
+        if not selected_week:
+            error_msg = f"无效的周次选择: {week_str}"
+            return render_template("insider.html", error=error_msg, week=week_str, user_info=user_info)
+        
+        # 使用生成的文件名格式保存文件
+        filename = selected_week["filename"]
+        save_path = SCHEDULES_DIR / f"{filename}.{ext}"
+        
+        # 删除同名的旧文件（不同扩展名）
         for old_ext in ALLOWED_IMAGE_EXTENSIONS:
-            old_path = SCHEDULES_DIR / f"{week_str}.{old_ext}"
+            old_path = SCHEDULES_DIR / f"{filename}.{old_ext}"
             if old_path.exists():
                 try:
                     old_path.unlink()
                 except Exception:
                     pass
-        save_path = SCHEDULES_DIR / f"{week_str}.{ext}"
+        
         image_file.save(save_path)
+        print(f"文件已保存为: {save_path}")
 
         return redirect(url_for("insider", week=week_str))
 
@@ -959,6 +1060,13 @@ def api_get_schedules():
     """API端点：获取所有可用的排班文件列表"""
     schedules = get_available_schedules()
     return jsonify({"schedules": schedules})
+
+
+@app.get("/api/week-options")
+def api_get_week_options():
+    """API端点：获取周次选项列表"""
+    week_options = generate_week_options()
+    return jsonify({"week_options": week_options})
 
 
 @app.route("/schedule-table")
