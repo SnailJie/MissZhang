@@ -232,27 +232,83 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeApp() {
   console.log('开始初始化应用...');
   
-  // 获取周次选项并填充下拉框
+  // 加载已有的排班表选项（用于查看）
+  function loadExistingSchedules() {
+    console.log('开始加载已有排班表...');
+    fetch('/api/schedules')
+      .then(response => {
+        console.log('排班表API响应状态:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('获取到的排班表:', data);
+        const schedules = data.schedules;
+        const weekSelect = document.getElementById('week');
+        
+        if (!weekSelect) {
+          console.error('找不到"选择周"下拉框元素');
+          return;
+        }
+        
+        // 清空现有选项
+        weekSelect.innerHTML = '<option value="">请选择排班周次</option>';
+        
+        if (schedules.length === 0) {
+          weekSelect.innerHTML = '<option value="">暂无排班数据</option>';
+          return;
+        }
+        
+        // 添加已有排班表选项
+        schedules.forEach(schedule => {
+          const optionElement = document.createElement('option');
+          optionElement.value = schedule.filename;
+          optionElement.textContent = schedule.display_name;
+          
+          // 如果当前选中的周次匹配，则设置为选中状态
+          if (schedule.filename === '{{ week or "" }}') {
+            optionElement.selected = true;
+          }
+          
+          weekSelect.appendChild(optionElement);
+        });
+        
+        // 如果没有匹配的周次，尝试设置默认值
+        if (!('{{ week or "" }}' && schedules.some(s => s.filename === '{{ week or "" }}'))) {
+          if (schedules.length > 0) {
+            weekSelect.value = schedules[0].filename;
+          }
+        }
+        
+        console.log('已有排班表加载完成');
+      })
+      .catch(error => {
+        console.error('加载已有排班表失败:', error);
+        const weekSelect = document.getElementById('week');
+        if (weekSelect) {
+          weekSelect.innerHTML = '<option value="">加载失败，请刷新重试</option>';
+        }
+      });
+  }
+
+  // 加载周次选项（用于上传）
   function loadWeekOptions() {
     console.log('开始加载周次选项...');
     fetch('/api/week-options')
       .then(response => {
-        console.log('API响应状态:', response.status);
+        console.log('周次选项API响应状态:', response.status);
         return response.json();
       })
       .then(data => {
         console.log('获取到的周次选项:', data);
         const weekOptions = data.week_options;
-        const weekSelect = document.getElementById('week');
         const weekPostSelect = document.getElementById('weekPost');
         
-        if (!weekSelect || !weekPostSelect) {
-          console.error('找不到下拉框元素');
+        if (!weekPostSelect) {
+          console.error('找不到"上传周"下拉框元素');
           return;
         }
         
-        // 清空现有选项（保留第一个提示选项）
-        weekSelect.innerHTML = '<option value="">请选择排班周次</option>';
+        // 清空现有选项
         weekPostSelect.innerHTML = '<option value="">请选择排班周次</option>';
         
         // 添加周次选项
@@ -260,41 +316,23 @@ function initializeApp() {
           const optionElement = document.createElement('option');
           optionElement.value = option.value;
           optionElement.textContent = option.label;
-          
-          // 如果当前选中的周次匹配，则设置为选中状态
-          if (option.value === '{{ week or "" }}') {
-            optionElement.selected = true;
-          }
-          
-          weekSelect.appendChild(optionElement.cloneNode(true));
           weekPostSelect.appendChild(optionElement);
         });
-        
-        // 如果没有匹配的周次，尝试设置默认值
-        if (!('{{ week or "" }}' && weekOptions.some(o => o.value === '{{ week or "" }}'))) {
-          if (weekOptions.length > 0) {
-            weekSelect.value = weekOptions[0].value;
-            weekPostSelect.value = weekOptions[0].value;
-          }
-        }
         
         console.log('周次选项加载完成');
       })
       .catch(error => {
         console.error('加载周次选项失败:', error);
-        // 显示错误提示
-        const weekSelect = document.getElementById('week');
         const weekPostSelect = document.getElementById('weekPost');
-        
-        if (weekSelect && weekPostSelect) {
-          weekSelect.innerHTML = '<option value="">加载失败，请刷新重试</option>';
+        if (weekPostSelect) {
           weekPostSelect.innerHTML = '<option value="">加载失败，请刷新重试</option>';
         }
       });
   }
   
   // 初始化加载
-  loadWeekOptions();
+  loadExistingSchedules(); // 加载已有排班表（用于查看）
+  loadWeekOptions();       // 加载周次选项（用于上传）
   
   // 刷新按钮事件
   const refreshPostBtn = document.getElementById('refreshPostBtn');
@@ -303,7 +341,8 @@ function initializeApp() {
     refreshPostBtn.addEventListener('click', function(e) {
       e.preventDefault();
       console.log('刷新按钮被点击');
-      loadWeekOptions();
+      loadExistingSchedules(); // 刷新已有排班表
+      loadWeekOptions();       // 刷新周次选项
     });
   }
   
