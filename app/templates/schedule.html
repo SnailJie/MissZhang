@@ -166,6 +166,130 @@
 // 用于存储排班数据
 let availableSchedules = [];
 
+// 获取班次类型 - 直接使用shift字段，如果没有则从时间范围推断
+function getShiftType(shift) {
+  if (shift.shift) {
+    return shift.shift; // 直接使用存储的班次信息
+  }
+  
+  // 兼容性处理：如果没有shift字段，从时间范围推断
+  if (!shift.time_range) return '其他';
+  
+  const time = shift.time_range.toLowerCase();
+  
+  if (time.includes('07:') || time.includes('08:') || time.includes('09:') || 
+      time.includes('10:') || time.includes('11:') || time.includes('12:')) {
+    return '上午';
+  } else if (time.includes('13:') || time.includes('14:') || time.includes('15:') || 
+             time.includes('16:') || time.includes('17:')) {
+    return '下午';
+  } else if (time.includes('18:') || time.includes('19:') || time.includes('20:') || 
+             time.includes('21:')) {
+    return '晚班';
+  } else if (time.includes('22:') || time.includes('23:') || time.includes('00:') || 
+             time.includes('01:') || time.includes('02:') || time.includes('03:') || 
+             time.includes('04:') || time.includes('05:') || time.includes('06:')) {
+    return '夜班';
+  }
+  
+  return '其他';
+}
+
+// 重组平日班数据：将数据转换为以班次为行、日期为列、岗位为值的结构
+function reorganizeWeekdayData(weekdayTables) {
+  const reorganized = {
+    dates: [],
+    shifts: {} // 班次类型 -> { 日期 -> [岗位列表] }
+  };
+  
+  // 获取所有日期
+  if (weekdayTables.length > 0 && weekdayTables[0].dates) {
+    reorganized.dates = weekdayTables[0].dates;
+  }
+  
+  // 初始化班次数据结构
+  const shiftTypes = ['上午', '下午', '晚班', '夜班'];
+  shiftTypes.forEach(shiftType => {
+    reorganized.shifts[shiftType] = {};
+    reorganized.dates.forEach(date => {
+      reorganized.shifts[shiftType][date] = [];
+    });
+  });
+  
+  // 处理每个表格的数据
+  weekdayTables.forEach(table => {
+    table.shifts.forEach(shift => {
+      const shiftType = getShiftType(shift);
+      
+      // 将岗位信息添加到对应的班次和日期
+      reorganized.dates.forEach(date => {
+        if (shift.assignments[date] && shift.assignments[date] !== '-') {
+          reorganized.shifts[shiftType][date].push(shift.position);
+        }
+      });
+    });
+  });
+  
+  return reorganized;
+}
+
+// 渲染平日班表格（新格式）
+function renderWeekdayScheduleTable(weekdayTables) {
+  const data = reorganizeWeekdayData(weekdayTables);
+  
+  let html = `
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="mb-0 text-primary">平日班次安排</h6>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered table-hover">
+            <thead class="table-light">
+              <tr>
+                <th style="min-width: 80px;">班次</th>
+  `;
+  
+  // 添加日期列
+  data.dates.forEach(date => {
+    html += `<th class="text-center" style="min-width: 120px;">${date}</th>`;
+  });
+  
+  html += `
+              </tr>
+            </thead>
+            <tbody>
+  `;
+  
+  // 添加班次行
+  const shiftTypes = ['上午', '下午', '晚班', '夜班'];
+  shiftTypes.forEach(shiftType => {
+    html += `
+      <tr>
+        <td class="fw-bold">${shiftType}</td>
+    `;
+    
+    // 添加每天的岗位
+    data.dates.forEach(date => {
+      const positions = data.shifts[shiftType][date];
+      const positionText = positions.length > 0 ? positions.join(', ') : '-';
+      html += `<td class="text-center">${positionText}</td>`;
+    });
+    
+    html += '</tr>';
+  });
+  
+  html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  return html;
+}
+
 // 获取可用的排班文件列表
 async function loadScheduleOptions() {
   try {
@@ -292,15 +416,13 @@ function renderScheduleData(data) {
     }
   });
   
-  // 渲染平日班表格
+  // 渲染平日班表格（新格式）
   if (weekdayTables.length > 0) {
     html += `<h6 class="mb-3 text-primary">平日班</h6>`;
-    weekdayTables.forEach(table => {
-      html += renderSingleTable(table, 'primary');
-    });
+    html += renderWeekdayScheduleTable(weekdayTables);
   }
   
-  // 渲染周末班表格
+  // 渲染周末班表格（保持原格式）
   if (weekendTables.length > 0) {
     html += `<h6 class="mb-3 text-success mt-4">周末班</h6>`;
     weekendTables.forEach(table => {

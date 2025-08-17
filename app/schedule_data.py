@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 # 排班表数据结构定义
 @dataclass
@@ -8,6 +8,7 @@ class ScheduleShift:
     position: str  # 岗位，如 "MR1", "MR2" 等
     time_range: str  # 时间范围，如 "07:30-13:00"
     assignments: Dict[str, str]  # 日期到人员姓名的映射
+    shift: Optional[str] = None  # 班次类型，如 "上午", "下午", "晚班", "夜班"
 
 @dataclass
 class ScheduleTable:
