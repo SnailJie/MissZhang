@@ -117,22 +117,22 @@
       </div>
       <div class="card-body">
         <div class="row g-3">
-          <div class="col-12 col-md-6">
+          <!-- <div class="col-12 col-md-6">
             <label for="week" class="form-label">选择周</label>
             <div class="input-group">
               <select id="week" name="week" class="form-select schedule-select" required>
                 <option value="">请选择排班周次</option>
               </select>
             </div>
-          </div>
+          </div> -->
           <div class="col-12 col-md-6 d-flex align-items-end">
             <div class="d-grid gap-2 w-100">
-              <!-- <button type="button" class="btn btn-primary" id="viewScheduleBtn">
+              <button type="button" class="btn btn-primary" id="viewScheduleBtn">
                 🔍 查看我的排班
-              </button> -->
-              <a href="{{ url_for('schedule_table') }}" class="btn btn-secondary">
+              </button>
+              <!-- <a href="{{ url_for('schedule_table') }}" class="btn btn-secondary">
                 📋 查看排班详情
-              </a>
+              </a> -->
               <a href="{{ url_for('manual_schedule') }}" class="btn btn-success">
                 ✏️ 手动填写
               </a>
