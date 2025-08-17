@@ -86,19 +86,61 @@
   vertical-align: middle;
 }
 
+/* 默认的table-hover样式 - 优先级较低 */
 .table-hover tbody tr:hover {
   background-color: rgba(107, 227, 255, 0.1);
 }
 
-/* 日期行背景色 - 轮换不同颜色 */
-.date-color-0 { background-color: rgba(255, 99, 132, 0.1) !important; }
-.date-color-1 { background-color: rgba(54, 162, 235, 0.1) !important; }
-.date-color-2 { background-color: rgba(255, 205, 86, 0.1) !important; }
-.date-color-3 { background-color: rgba(75, 192, 192, 0.1) !important; }
-.date-color-4 { background-color: rgba(153, 102, 255, 0.1) !important; }
-.date-color-5 { background-color: rgba(255, 159, 64, 0.1) !important; }
-.date-color-6 { background-color: rgba(199, 199, 199, 0.1) !important; }
-.date-color-7 { background-color: rgba(83, 102, 255, 0.1) !important; }
+/* 日期行背景色 - 使用高特异性选择器覆盖Bootstrap样式 */
+.table.table-hover tbody tr.date-color-0,
+.table.table-hover tbody tr.date-color-0:hover {
+  background-color: rgba(255, 99, 132, 0.15) !important;
+}
+
+.table.table-hover tbody tr.date-color-1,
+.table.table-hover tbody tr.date-color-1:hover {
+  background-color: rgba(54, 162, 235, 0.15) !important;
+}
+
+.table.table-hover tbody tr.date-color-2,
+.table.table-hover tbody tr.date-color-2:hover {
+  background-color: rgba(255, 205, 86, 0.15) !important;
+}
+
+.table.table-hover tbody tr.date-color-3,
+.table.table-hover tbody tr.date-color-3:hover {
+  background-color: rgba(75, 192, 192, 0.15) !important;
+}
+
+.table.table-hover tbody tr.date-color-4,
+.table.table-hover tbody tr.date-color-4:hover {
+  background-color: rgba(153, 102, 255, 0.15) !important;
+}
+
+.table.table-hover tbody tr.date-color-5,
+.table.table-hover tbody tr.date-color-5:hover {
+  background-color: rgba(255, 159, 64, 0.15) !important;
+}
+
+.table.table-hover tbody tr.date-color-6,
+.table.table-hover tbody tr.date-color-6:hover {
+  background-color: rgba(199, 199, 199, 0.15) !important;
+}
+
+.table.table-hover tbody tr.date-color-7,
+.table.table-hover tbody tr.date-color-7:hover {
+  background-color: rgba(83, 102, 255, 0.15) !important;
+}
+
+/* 额外的强制样式 - 确保覆盖所有可能的Bootstrap样式 */
+tbody tr.date-color-0 td { background-color: rgba(255, 99, 132, 0.15) !important; }
+tbody tr.date-color-1 td { background-color: rgba(54, 162, 235, 0.15) !important; }
+tbody tr.date-color-2 td { background-color: rgba(255, 205, 86, 0.15) !important; }
+tbody tr.date-color-3 td { background-color: rgba(75, 192, 192, 0.15) !important; }
+tbody tr.date-color-4 td { background-color: rgba(153, 102, 255, 0.15) !important; }
+tbody tr.date-color-5 td { background-color: rgba(255, 159, 64, 0.15) !important; }
+tbody tr.date-color-6 td { background-color: rgba(199, 199, 199, 0.15) !important; }
+tbody tr.date-color-7 td { background-color: rgba(83, 102, 255, 0.15) !important; }
 
 /* 响应式优化 */
 @media (max-width: 768px) {
