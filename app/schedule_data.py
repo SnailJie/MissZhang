@@ -278,7 +278,18 @@ def read_schedule_from_csv(week: str) -> ScheduleData:
 
 
 def get_schedule_data(week: str) -> ScheduleData:
-    """获取排班数据，优先从CSV读取，如果失败则返回mock数据"""
+    """获取排班数据，优先从数据库读取手动填写的数据，然后尝试CSV，最后返回mock数据"""
+    # 首先尝试从数据库读取手动填写的数据
+    try:
+        from app.main import get_manual_schedule_data
+        manual_data = get_manual_schedule_data(week)
+        if manual_data:
+            print(f"成功从数据库获取手动排班数据：{week}")
+            return manual_data
+    except Exception as e:
+        print(f"从数据库读取手动排班数据失败: {e}")
+    
+    # 然后尝试从CSV读取
     try:
         return read_schedule_from_csv(week)
     except Exception as e:

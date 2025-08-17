@@ -1,0 +1,454 @@
+{% extends 'base.html' %}
+{% set title = '手动填写排班表' %}
+
+{% block head %}
+<style>
+/* 手动填写页面样式 */
+.manual-schedule-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.schedule-table th,
+.schedule-table td {
+  border: 1px solid #dee2e6;
+  padding: 8px 12px;
+  text-align: center;
+}
+
+.schedule-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.schedule-table input,
+.schedule-table select {
+  width: 100%;
+  border: none;
+  padding: 4px 8px;
+  text-align: center;
+  background: transparent;
+}
+
+.schedule-table input:focus,
+.schedule-table select:focus {
+  outline: 2px solid #6be3ff;
+  background: #ffffff;
+}
+
+.add-row-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.add-row-btn:hover {
+  background-color: #218838;
+}
+
+.remove-row-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.remove-row-btn:hover {
+  background-color: #c82333;
+}
+
+.week-selector {
+  margin-bottom: 30px;
+}
+
+.week-selector select {
+  padding: 12px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.week-selector select:focus {
+  border-color: #6be3ff;
+  box-shadow: 0 0 0 0.2rem rgba(107, 227, 255, 0.25);
+  background: #ffffff;
+}
+
+.table-section {
+  margin-bottom: 40px;
+}
+
+.table-header {
+  display: flex;
+  justify-content: between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.table-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #495057;
+  margin: 0;
+}
+
+.submit-section {
+  padding-top: 30px;
+  border-top: 2px solid #e9ecef;
+  text-align: center;
+}
+
+.btn-primary {
+  background-color: #6be3ff;
+  border-color: #6be3ff;
+  padding: 12px 30px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background-color: #5dd1ed;
+  border-color: #5dd1ed;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .manual-schedule-container {
+    padding: 10px;
+  }
+  
+  .schedule-table {
+    font-size: 14px;
+  }
+  
+  .schedule-table th,
+  .schedule-table td {
+    padding: 6px 8px;
+  }
+  
+  .schedule-table input,
+  .schedule-table select {
+    font-size: 14px;
+    padding: 2px 4px;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="manual-schedule-container">
+  <h2 class="mb-4">手动填写排班表</h2>
+  
+  {% if error %}
+  <div class="alert alert-danger" role="alert">{{ error }}</div>
+  {% endif %}
+  
+  {% if success %}
+  <div class="alert alert-success" role="alert">{{ success }}</div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('manual_schedule') }}" id="manualScheduleForm">
+    <!-- 周次选择 -->
+    <div class="week-selector">
+      <label for="weekSelect" class="form-label">选择排班周次：</label>
+      <select id="weekSelect" name="week" class="form-select" required>
+        <option value="">请选择排班周次</option>
+      </select>
+    </div>
+
+    <!-- 平日班表格 -->
+    <div class="table-section">
+      <div class="table-header">
+        <h3 class="table-title">平日班</h3>
+        <button type="button" class="add-row-btn" onclick="addWeekdayRow()">+ 增加一行</button>
+      </div>
+      <div class="table-responsive">
+        <table class="schedule-table" id="weekdayTable">
+          <thead>
+            <tr>
+              <th width="120">日期</th>
+              <th width="120">班次</th>
+              <th width="120">岗位</th>
+              <th width="150">人员姓名</th>
+              <th width="80">操作</th>
+            </tr>
+          </thead>
+          <tbody id="weekdayTableBody">
+            <!-- 表格行将通过JavaScript动态添加 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 周末班表格 -->
+    <div class="table-section">
+      <div class="table-header">
+        <h3 class="table-title">周末班</h3>
+        <button type="button" class="add-row-btn" onclick="addWeekendRow()">+ 增加一行</button>
+      </div>
+      <div class="table-responsive">
+        <table class="schedule-table" id="weekendTable">
+          <thead>
+            <tr>
+              <th width="120">日期</th>
+              <th width="120">班次</th>
+              <th width="150">人员姓名</th>
+              <th width="80">操作</th>
+            </tr>
+          </thead>
+          <tbody id="weekendTableBody">
+            <!-- 表格行将通过JavaScript动态添加 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 提交按钮 -->
+    <div class="submit-section">
+      <button type="submit" class="btn btn-primary">📤 提交保存</button>
+      <a href="{{ url_for('insider') }}" class="btn btn-link">← 返回上级页面</a>
+    </div>
+  </form>
+</div>
+
+<script>
+// 班次选项
+const SHIFT_OPTIONS = ['上午', '下午', '晚班', '夜班'];
+
+// 岗位选项
+const POSITION_OPTIONS = [
+  // MR岗位
+  'MR1', 'MR2', 'MR3', 'MR4', 'MR5', 'MR6', 'MR7', 'MR8', 'MR9', 'MR10', 'MR11', 'MR12', 'MR13',
+  // CT岗位
+  'CT1', 'CT2', 'CT3', 'CT4', 'CT5', 'CT6', 'CT7', 'CT8', 'CT9', 'CT10', 'CT11', 'CT12', 'CT13'
+];
+
+// 周末班次选项（简化）
+const WEEKEND_SHIFT_OPTIONS = ['上午', '下午', '晚班', '夜班', '全天'];
+
+let weekdayRowCount = 0;
+let weekendRowCount = 0;
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+  loadWeekOptions();
+  
+  // 添加初始行
+  addWeekdayRow();
+  addWeekendRow();
+  
+  // 表单提交处理
+  const form = document.getElementById('manualScheduleForm');
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const weekSelect = document.getElementById('weekSelect');
+    if (!weekSelect.value) {
+      alert('请选择排班周次');
+      return;
+    }
+    
+    // 收集表单数据
+    const formData = collectFormData();
+    if (!formData) {
+      return; // 验证失败
+    }
+    
+    // 提交数据
+    submitScheduleData(formData);
+  });
+});
+
+// 加载周次选项
+function loadWeekOptions() {
+  fetch('/api/week-options')
+    .then(response => response.json())
+    .then(data => {
+      const weekSelect = document.getElementById('weekSelect');
+      weekSelect.innerHTML = '<option value="">请选择排班周次</option>';
+      
+      data.week_options.forEach(option => {
+        const optionElement = document.createElement('option');
+        optionElement.value = option.value;
+        optionElement.textContent = option.label;
+        weekSelect.appendChild(optionElement);
+      });
+    })
+    .catch(error => {
+      console.error('加载周次选项失败:', error);
+      const weekSelect = document.getElementById('weekSelect');
+      weekSelect.innerHTML = '<option value="">加载失败，请刷新重试</option>';
+    });
+}
+
+// 添加平日班行
+function addWeekdayRow() {
+  weekdayRowCount++;
+  const tbody = document.getElementById('weekdayTableBody');
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td><input type="date" name="weekday_date_${weekdayRowCount}" required></td>
+    <td>
+      <select name="weekday_shift_${weekdayRowCount}" required>
+        <option value="">选择班次</option>
+        ${SHIFT_OPTIONS.map(shift => `<option value="${shift}">${shift}</option>`).join('')}
+      </select>
+    </td>
+    <td>
+      <select name="weekday_position_${weekdayRowCount}" required>
+        <option value="">选择岗位</option>
+        ${POSITION_OPTIONS.map(position => `<option value="${position}">${position}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="text" name="weekday_staff_${weekdayRowCount}" placeholder="输入姓名" required></td>
+    <td><button type="button" class="remove-row-btn" onclick="removeRow(this)">删除</button></td>
+  `;
+  tbody.appendChild(row);
+}
+
+// 添加周末班行
+function addWeekendRow() {
+  weekendRowCount++;
+  const tbody = document.getElementById('weekendTableBody');
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td><input type="date" name="weekend_date_${weekendRowCount}" required></td>
+    <td>
+      <select name="weekend_shift_${weekendRowCount}" required>
+        <option value="">选择班次</option>
+        ${WEEKEND_SHIFT_OPTIONS.map(shift => `<option value="${shift}">${shift}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="text" name="weekend_staff_${weekendRowCount}" placeholder="输入姓名" required></td>
+    <td><button type="button" class="remove-row-btn" onclick="removeRow(this)">删除</button></td>
+  `;
+  tbody.appendChild(row);
+}
+
+// 删除行
+function removeRow(button) {
+  const row = button.closest('tr');
+  row.remove();
+}
+
+// 收集表单数据
+function collectFormData() {
+  const week = document.getElementById('weekSelect').value;
+  
+  if (!week) {
+    alert('请选择排班周次');
+    return null;
+  }
+  
+  const weekdayData = [];
+  const weekendData = [];
+  
+  // 收集平日班数据
+  for (let i = 1; i <= weekdayRowCount; i++) {
+    const dateInput = document.querySelector(`input[name="weekday_date_${i}"]`);
+    const shiftSelect = document.querySelector(`select[name="weekday_shift_${i}"]`);
+    const positionSelect = document.querySelector(`select[name="weekday_position_${i}"]`);
+    const staffInput = document.querySelector(`input[name="weekday_staff_${i}"]`);
+    
+    if (dateInput && dateInput.closest('tr')) { // 检查行是否还存在
+      if (dateInput.value && shiftSelect.value && positionSelect.value && staffInput.value) {
+        weekdayData.push({
+          date: dateInput.value,
+          shift: shiftSelect.value,
+          position: positionSelect.value,
+          staff: staffInput.value.trim()
+        });
+      }
+    }
+  }
+  
+  // 收集周末班数据
+  for (let i = 1; i <= weekendRowCount; i++) {
+    const dateInput = document.querySelector(`input[name="weekend_date_${i}"]`);
+    const shiftSelect = document.querySelector(`select[name="weekend_shift_${i}"]`);
+    const staffInput = document.querySelector(`input[name="weekend_staff_${i}"]`);
+    
+    if (dateInput && dateInput.closest('tr')) { // 检查行是否还存在
+      if (dateInput.value && shiftSelect.value && staffInput.value) {
+        weekendData.push({
+          date: dateInput.value,
+          shift: shiftSelect.value,
+          staff: staffInput.value.trim()
+        });
+      }
+    }
+  }
+  
+  if (weekdayData.length === 0 && weekendData.length === 0) {
+    alert('请至少填写一行排班数据');
+    return null;
+  }
+  
+  return {
+    week: week,
+    weekday_data: weekdayData,
+    weekend_data: weekendData
+  };
+}
+
+// 提交排班数据
+function submitScheduleData(formData) {
+  const submitBtn = document.querySelector('button[type="submit"]');
+  const originalText = submitBtn.innerHTML;
+  
+  // 显示加载状态
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> 保存中...';
+  
+  fetch('/api/manual-schedule', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(formData)
+  })
+  .then(response => {
+    if (response.ok) {
+      return response.json();
+    } else {
+      throw new Error('提交失败');
+    }
+  })
+  .then(data => {
+    if (data.success) {
+      alert('排班表保存成功！');
+      // 重定向到排班查看页面
+      window.location.href = `/schedule?week=${encodeURIComponent(formData.week)}`;
+    } else {
+      throw new Error(data.error || '保存失败');
+    }
+  })
+  .catch(error => {
+    console.error('提交失败:', error);
+    alert('保存失败，请重试：' + error.message);
+  })
+  .finally(() => {
+    // 恢复按钮状态
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
+  });
+}
+</script>
+{% endblock %}

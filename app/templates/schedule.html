@@ -1,5 +1,131 @@
 {% extends 'base.html' %}
 {% set title = '我的排班' %}
+
+{% block head %}
+<style>
+/* 我的排班页面样式 */
+.schedule-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.schedule-controls {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 2px solid #dee2e6;
+}
+
+.schedule-controls label {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.schedule-controls select {
+  width: 100%;
+  max-width: 400px;
+  padding: 12px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.schedule-controls select:focus {
+  border-color: #6be3ff;
+  box-shadow: 0 0 0 0.2rem rgba(107, 227, 255, 0.25);
+  background: #ffffff;
+  transform: translateY(-1px);
+}
+
+.schedule-controls select:hover {
+  border-color: #6be3ff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 卡片样式 */
+.card {
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  border-radius: 0.75rem 0.75rem 0 0 !important;
+  padding: 15px 20px;
+}
+
+.card-body {
+  padding: 20px;
+}
+
+/* 表格样式 */
+.table {
+  margin-bottom: 0;
+}
+
+.table th {
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+  font-weight: 600;
+  color: #495057;
+}
+
+.table td {
+  border-color: #dee2e6;
+  vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(107, 227, 255, 0.1);
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .schedule-container {
+    padding: 10px;
+  }
+  
+  .schedule-controls {
+    padding: 15px;
+  }
+  
+  .schedule-controls select {
+    font-size: 16px; /* 防止iOS缩放 */
+  }
+  
+  .card-body {
+    padding: 15px;
+  }
+  
+  .table-responsive {
+    font-size: 14px;
+  }
+}
+
+/* 加载和提示样式 */
+.alert {
+  border-radius: 8px;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.spinner-border {
+  color: #6be3ff;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="schedule">
   <div class="container schedule-container">
@@ -10,18 +136,12 @@
         <option value="">正在加载...</option>
       </select>
     </div>
-    <table class="schedule-table">
-      <thead>
-        <tr>
-          <th>星期</th>
-          <th>日期</th>
-          <th>值班时间</th>
-        </tr>
-      </thead>
-      <tbody id="schedule-body">
-        <!-- JS will fill this -->
-      </tbody>
-    </table>
+    <div id="schedule-content">
+      <!-- 排班表内容将通过JavaScript动态生成 -->
+      <div class="text-center text-muted">
+        <p>请选择排班周次查看数据</p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -86,26 +206,12 @@ async function loadScheduleOptions() {
 function renderScheduleFromFilename(filename) {
   if (!filename) {
     const tbody = document.getElementById('schedule-body');
-    tbody.innerHTML = '<tr><td colspan="3">请选择排班周次</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4">请选择排班周次</td></tr>';
     return;
   }
   
-  // 解析文件名格式: "2024-W34-0821-0830"
-  const parts = filename.split('-');
-  if (parts.length >= 4 && parts[1].startsWith('W')) {
-    const year = parts[0];
-    const weekNum = parts[1].substring(1); // 去掉'W'前缀
-    const startDate = parts[2];
-    const endDate = parts[3];
-    
-    // 构建日期范围 (简化版本，基于开始日期)
-    const startMonth = parseInt(startDate.substring(0, 2));
-    const startDay = parseInt(startDate.substring(2, 4));
-    const endMonth = parseInt(endDate.substring(0, 2));
-    const endDay = parseInt(endDate.substring(2, 4));
-    
-    renderScheduleForWeek(year, startMonth, startDay, endMonth, endDay, weekNum);
-  }
+  // 调用API获取详细的排班数据
+  fetchAndRenderScheduleData(filename);
 }
 
 // 从URL参数获取周次并自动选择
@@ -119,36 +225,114 @@ function getWeekFromUrl() {
   return null;
 }
 
-// 渲染指定周次的排班表
-function renderScheduleForWeek(year, startMonth, startDay, endMonth, endDay, weekNum) {
-  const tbody = document.getElementById('schedule-body');
-  const days = ['一','二','三','四','五','六','日'];
-  const duty = [
-    '白班 8:00-17:00', '夜班 17:00-次日8:00', '休息', '白班 8:00-17:00', 
-    '白班 8:00-17:00', '夜班 17:00-次日8:00', '休息'
-  ];
+// 从API获取并渲染排班数据
+function fetchAndRenderScheduleData(week) {
+  const scheduleContent = document.getElementById('schedule-content');
   
-  tbody.innerHTML = '';
+  // 显示加载状态
+  scheduleContent.innerHTML = `
+    <div class="text-center">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">加载中...</span>
+      </div>
+      <p class="mt-2">正在加载排班数据...</p>
+    </div>
+  `;
   
-  // 创建周内日期
-  const startDate = new Date(parseInt(year), startMonth - 1, startDay);
+  // 调用API获取排班数据
+  fetch(`/api/schedule-data/${encodeURIComponent(week)}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        scheduleContent.innerHTML = `
+          <div class="alert alert-danger">
+            <h6>加载失败</h6>
+            <p>${data.error}</p>
+          </div>
+        `;
+        return;
+      }
+      
+      // 渲染排班数据
+      scheduleContent.innerHTML = renderScheduleData(data);
+    })
+    .catch(error => {
+      console.error('获取排班数据失败:', error);
+      scheduleContent.innerHTML = `
+        <div class="alert alert-danger">
+          <h6>获取排班数据失败</h6>
+          <p>请检查网络连接并重试</p>
+        </div>
+      `;
+    });
+}
+
+// 渲染排班数据为HTML
+function renderScheduleData(data) {
+  let html = `<h5 class="mb-3">第${data.week}周排班表</h5>`;
   
-  for (let i = 0; i < 7; i++) {
-    const currentDate = new Date(startDate);
-    currentDate.setDate(startDate.getDate() + i);
-    
-    const monthStr = String(currentDate.getMonth() + 1).padStart(2, '0');
-    const dayStr = String(currentDate.getDate()).padStart(2, '0');
-    const dateStr = `${monthStr}月${dayStr}日`;
-    
-    tbody.innerHTML += `
-      <tr>
-        <td>星期${days[i]}</td>
-        <td>${dateStr}</td>
-        <td>${duty[i]}</td>
-      </tr>
+  if (!data.tables || data.tables.length === 0) {
+    return `
+      <div class="alert alert-info">
+        <h6>暂无排班数据</h6>
+        <p>该周次还没有排班数据</p>
+      </div>
     `;
   }
+  
+  data.tables.forEach(table => {
+    html += `
+      <div class="card mb-4">
+        <div class="card-header">
+          <h6 class="mb-0 text-primary">${table.title}</h6>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th style="min-width: 80px;">岗位</th>
+                  <th style="min-width: 120px;">时间</th>
+    `;
+    
+    // 添加日期列
+    table.dates.forEach(date => {
+      html += `<th class="text-center" style="min-width: 80px;">${date}</th>`;
+    });
+    
+    html += `
+                </tr>
+              </thead>
+              <tbody>
+    `;
+    
+    // 添加排班行
+    table.shifts.forEach(shift => {
+      html += `
+        <tr>
+          <td class="fw-bold">${shift.position}</td>
+          <td class="text-muted">${shift.time_range}</td>
+      `;
+      
+      // 添加每天的排班人员
+      table.dates.forEach(date => {
+        const staff = shift.assignments[date] || '-';
+        html += `<td class="text-center">${staff}</td>`;
+      });
+      
+      html += '</tr>';
+    });
+    
+    html += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  
+  return html;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -179,6 +363,9 @@ document.addEventListener('DOMContentLoaded', () => {
           renderScheduleFromFilename(urlWeek);
         } else {
           console.log('未找到匹配的排班:', urlWeek);
+          // 如果URL中有周次参数但没有找到匹配的排班，仍然尝试渲染
+          select.value = urlWeek;
+          renderScheduleFromFilename(urlWeek);
         }
       }
     }, 500); // 给一点时间让排班选项加载完成

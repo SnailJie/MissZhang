@@ -326,9 +326,27 @@ def init_db() -> None:
             """
         )
         
+        # 手动填写的排班数据表
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS manual_schedules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                week TEXT NOT NULL,
+                date TEXT NOT NULL,
+                shift TEXT NOT NULL,
+                position TEXT,
+                staff_name TEXT NOT NULL,
+                schedule_type TEXT NOT NULL CHECK (schedule_type IN ('weekday', 'weekend')),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        
         # 创建索引
         conn.execute("CREATE INDEX IF NOT EXISTS idx_users_openid ON users(openid)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON user_profiles(user_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_manual_schedules_week ON manual_schedules(week)")
         
         conn.commit()
 
@@ -1221,8 +1239,38 @@ def get_available_schedules() -> List[Dict[str, str]]:
                 "filename": filename,
                 "display_name": display_name,
                 "year": year,
-                "week": week_num
+                "week": week_num,
+                "type": "csv"
             })
+    
+    # 查找手动填写的排班数据
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.execute(
+                "SELECT DISTINCT week FROM manual_schedules ORDER BY week"
+            )
+            manual_weeks = cursor.fetchall()
+            
+            for (week_value,) in manual_weeks:
+                # 解析周次格式: "2025-W34"
+                if '-W' in week_value:
+                    parts = week_value.split('-W')
+                    if len(parts) == 2:
+                        year = parts[0]
+                        week_num = parts[1]
+                        
+                        # 转换为友好格式: "第34周(手动填写)"
+                        display_name = f"第{week_num}周(手动填写)"
+                        
+                        schedules.append({
+                            "filename": week_value,
+                            "display_name": display_name,
+                            "year": year,
+                            "week": week_num,
+                            "type": "manual"
+                        })
+    except Exception as e:
+        print(f"获取手动排班数据列表失败: {e}")
     
     # 按年份和周数排序
     schedules.sort(key=lambda x: (x["year"], int(x["week"])))
@@ -1289,6 +1337,50 @@ def api_get_schedule_data(week: str):
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/manual-schedule", methods=["GET", "POST"])
+def manual_schedule():
+    """手动填写排班表页面"""
+    user_info = get_current_user()
+    
+    if request.method == "POST":
+        # 处理表单提交 - 重定向到API端点
+        return redirect(url_for('api_manual_schedule'))
+    
+    # GET - 显示手动填写页面
+    return render_template("manual_schedule.html", user_info=user_info)
+
+
+@app.route("/api/manual-schedule", methods=["POST"])
+def api_manual_schedule():
+    """API端点：保存手动填写的排班数据"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "请求数据不能为空"}), 400
+        
+        week = data.get('week', '').strip()
+        weekday_data = data.get('weekday_data', [])
+        weekend_data = data.get('weekend_data', [])
+        
+        if not week:
+            return jsonify({"success": False, "error": "请选择排班周次"}), 400
+        
+        if not is_valid_week_string(week):
+            return jsonify({"success": False, "error": "无效的周次格式"}), 400
+        
+        if not weekday_data and not weekend_data:
+            return jsonify({"success": False, "error": "请至少填写一行排班数据"}), 400
+        
+        # 保存到数据库
+        save_manual_schedule_data(week, weekday_data, weekend_data)
+        
+        return jsonify({"success": True, "message": "排班表保存成功"})
+        
+    except Exception as e:
+        print(f"保存手动排班数据失败: {e}")
+        return jsonify({"success": False, "error": "保存失败，请重试"}), 500
 
 
 @app.get("/health")
@@ -1454,6 +1546,151 @@ def save_user_profile(name: str, hospital: str, department: str) -> None:
     except Exception as e:
         print(f"保存用户信息到数据库失败: {e}")
         raise
+
+
+def save_manual_schedule_data(week: str, weekday_data: List[Dict], weekend_data: List[Dict]) -> None:
+    """保存手动填写的排班数据到数据库"""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            # 先删除该周次的现有数据
+            conn.execute("DELETE FROM manual_schedules WHERE week = ?", (week,))
+            
+            current_time = datetime.utcnow().isoformat()
+            
+            # 保存平日班数据
+            for item in weekday_data:
+                conn.execute(
+                    """
+                    INSERT INTO manual_schedules 
+                    (week, date, shift, position, staff_name, schedule_type, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (week, item['date'], item['shift'], item['position'], 
+                     item['staff'], 'weekday', current_time, current_time)
+                )
+            
+            # 保存周末班数据
+            for item in weekend_data:
+                conn.execute(
+                    """
+                    INSERT INTO manual_schedules 
+                    (week, date, shift, position, staff_name, schedule_type, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (week, item['date'], item['shift'], None, 
+                     item['staff'], 'weekend', current_time, current_time)
+                )
+            
+            conn.commit()
+            print(f"成功保存手动排班数据：周次 {week}")
+            
+    except Exception as e:
+        print(f"保存手动排班数据失败: {e}")
+        raise
+
+
+def get_manual_schedule_data(week: str) -> Optional[ScheduleData]:
+    """从数据库获取手动填写的排班数据"""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.execute(
+                """
+                SELECT date, shift, position, staff_name, schedule_type 
+                FROM manual_schedules 
+                WHERE week = ? 
+                ORDER BY schedule_type, date, shift, position
+                """,
+                (week,)
+            )
+            rows = cursor.fetchall()
+            
+            if not rows:
+                return None
+            
+            # 组织数据
+            weekday_data = {}
+            weekend_data = {}
+            all_dates = set()
+            
+            for row in rows:
+                date, shift, position, staff_name, schedule_type = row
+                all_dates.add(date)
+                
+                if schedule_type == 'weekday':
+                    key = f"{shift}"
+                    if key not in weekday_data:
+                        weekday_data[key] = {}
+                    if position not in weekday_data[key]:
+                        weekday_data[key][position] = {}
+                    weekday_data[key][position][date] = staff_name
+                    
+                elif schedule_type == 'weekend':
+                    key = f"{shift}"
+                    if key not in weekend_data:
+                        weekend_data[key] = {}
+                    if 'weekend' not in weekend_data[key]:
+                        weekend_data[key]['weekend'] = {}
+                    weekend_data[key]['weekend'][date] = staff_name
+            
+            # 转换为ScheduleData格式
+            tables = []
+            sorted_dates = sorted(list(all_dates))
+            
+            # 处理平日班数据
+            for shift_name, positions in weekday_data.items():
+                shifts = []
+                for position, assignments in positions.items():
+                    shift = ScheduleShift(
+                        position=position,
+                        time_range=get_time_range_for_shift(shift_name),
+                        assignments=assignments
+                    )
+                    shifts.append(shift)
+                
+                if shifts:
+                    table = ScheduleTable(
+                        title=f"平日班 - {shift_name}",
+                        shifts=shifts,
+                        dates=sorted_dates
+                    )
+                    tables.append(table)
+            
+            # 处理周末班数据
+            for shift_name, positions in weekend_data.items():
+                shifts = []
+                for position, assignments in positions.items():
+                    shift = ScheduleShift(
+                        position="周末班",
+                        time_range=get_time_range_for_shift(shift_name),
+                        assignments=assignments
+                    )
+                    shifts.append(shift)
+                
+                if shifts:
+                    table = ScheduleTable(
+                        title=f"周末班 - {shift_name}",
+                        shifts=shifts,
+                        dates=sorted_dates
+                    )
+                    tables.append(table)
+            
+            return ScheduleData(week=week, tables=tables)
+            
+    except Exception as e:
+        print(f"获取手动排班数据失败: {e}")
+        return None
+
+
+def get_time_range_for_shift(shift_name: str) -> str:
+    """根据班次名称获取时间范围"""
+    time_ranges = {
+        '上午': '08:00-12:00',
+        '下午': '13:00-17:00',
+        '晚班': '18:00-22:00',
+        '夜班': '22:00-次日08:00',
+        '全天': '全天'
+    }
+    return time_ranges.get(shift_name, shift_name)
 
 
 @app.post("/api/contact")
