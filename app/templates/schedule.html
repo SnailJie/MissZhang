@@ -249,6 +249,48 @@ function reorganizeWeekdayData(weekdayTables) {
   return reorganized;
 }
 
+// 重组周末班数据：将数据转换为以班次为行、日期为列、人员为值的结构
+function reorganizeWeekendData(weekendTables) {
+  const reorganized = {
+    dates: [],
+    shifts: {} // 班次类型 -> { 日期 -> [人员列表] }
+  };
+  
+  // 获取所有日期
+  if (weekendTables.length > 0 && weekendTables[0].dates) {
+    reorganized.dates = weekendTables[0].dates;
+  }
+  
+  // 初始化班次数据结构 - 周末班通常只有白班和夜班
+  const shiftTypes = ['白班', '夜班'];
+  shiftTypes.forEach(shiftType => {
+    reorganized.shifts[shiftType] = {};
+    reorganized.dates.forEach(date => {
+      reorganized.shifts[shiftType][date] = [];
+    });
+  });
+  
+  // 处理每个表格的数据
+  weekendTables.forEach(table => {
+    table.shifts.forEach(shift => {
+      // 根据岗位名称推断班次类型
+      let shiftType = '白班'; // 默认为白班
+      if (shift.position && (shift.position.includes('夜') || shift.position.includes('晚'))) {
+        shiftType = '夜班';
+      }
+      
+      // 将人员信息添加到对应的班次和日期
+      reorganized.dates.forEach(date => {
+        if (shift.assignments[date] && shift.assignments[date] !== '-') {
+          reorganized.shifts[shiftType][date].push(`${shift.position}: ${shift.assignments[date]}`);
+        }
+      });
+    });
+  });
+  
+  return reorganized;
+}
+
 // 渲染平日班表格（新格式）
 function renderWeekdayScheduleTable(weekdayTables) {
   const data = reorganizeWeekdayData(weekdayTables);
@@ -290,6 +332,63 @@ function renderWeekdayScheduleTable(weekdayTables) {
       const positions = data.shifts[shiftType][date];
       const positionText = positions.length > 0 ? positions.join(', ') : '-';
       html += `<td class="text-center">${positionText}</td>`;
+    });
+    
+    html += '</tr>';
+  });
+  
+  html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  return html;
+}
+
+// 渲染周末班表格（新格式）
+function renderWeekendScheduleTable(weekendTables) {
+  const data = reorganizeWeekendData(weekendTables);
+  
+  let html = `
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="mb-0 text-success">周末班次安排</h6>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered table-hover">
+            <thead class="table-light">
+              <tr>
+                <th style="min-width: 80px;">班次</th>
+  `;
+  
+  // 添加日期列
+  data.dates.forEach(date => {
+    html += `<th class="text-center" style="min-width: 120px;">${date}</th>`;
+  });
+  
+  html += `
+              </tr>
+            </thead>
+            <tbody>
+  `;
+  
+  // 添加班次行
+  const shiftTypes = ['白班', '夜班'];
+  shiftTypes.forEach(shiftType => {
+    html += `
+      <tr>
+        <td class="fw-bold">${shiftType}</td>
+    `;
+    
+    // 添加每天的人员安排
+    data.dates.forEach(date => {
+      const assignments = data.shifts[shiftType][date];
+      const assignmentText = assignments.length > 0 ? assignments.join('<br>') : '-';
+      html += `<td class="text-center">${assignmentText}</td>`;
     });
     
     html += '</tr>';
@@ -434,16 +533,12 @@ function renderScheduleData(data) {
   
   // 渲染平日班表格（新格式）
   if (weekdayTables.length > 0) {
-    html += `<h6 class="mb-3 text-primary">平日班</h6>`;
     html += renderWeekdayScheduleTable(weekdayTables);
   }
   
-  // 渲染周末班表格（保持原格式）
+  // 渲染周末班表格（新格式）
   if (weekendTables.length > 0) {
-    html += `<h6 class="mb-3 text-success mt-4">周末班</h6>`;
-    weekendTables.forEach(table => {
-      html += renderSingleTable(table, 'success');
-    });
+    html += renderWeekendScheduleTable(weekendTables);
   }
   
   return html;

@@ -186,7 +186,6 @@
               <th width="120">日期</th>
               <th width="120">班次</th>
               <th width="120">岗位</th>
-              <th width="150">人员姓名</th>
               <th width="80">操作</th>
             </tr>
           </thead>
@@ -209,7 +208,6 @@
             <tr>
               <th width="120">日期</th>
               <th width="120">班次</th>
-              <th width="150">人员姓名</th>
               <th width="80">操作</th>
             </tr>
           </thead>
@@ -317,7 +315,6 @@ function addWeekdayRow() {
         ${POSITION_OPTIONS.map(position => `<option value="${position}">${position}</option>`).join('')}
       </select>
     </td>
-    <td><input type="text" name="weekday_staff_${weekdayRowCount}" placeholder="输入姓名" required></td>
     <td><button type="button" class="remove-row-btn" onclick="removeRow(this)">删除</button></td>
   `;
   tbody.appendChild(row);
@@ -336,7 +333,6 @@ function addWeekendRow() {
         ${WEEKEND_SHIFT_OPTIONS.map(shift => `<option value="${shift}">${shift}</option>`).join('')}
       </select>
     </td>
-    <td><input type="text" name="weekend_staff_${weekendRowCount}" placeholder="输入姓名" required></td>
     <td><button type="button" class="remove-row-btn" onclick="removeRow(this)">删除</button></td>
   `;
   tbody.appendChild(row);
@@ -365,15 +361,14 @@ function collectFormData() {
     const dateInput = document.querySelector(`input[name="weekday_date_${i}"]`);
     const shiftSelect = document.querySelector(`select[name="weekday_shift_${i}"]`);
     const positionSelect = document.querySelector(`select[name="weekday_position_${i}"]`);
-    const staffInput = document.querySelector(`input[name="weekday_staff_${i}"]`);
     
     if (dateInput && dateInput.closest('tr')) { // 检查行是否还存在
-      if (dateInput.value && shiftSelect.value && positionSelect.value && staffInput.value) {
+      if (dateInput.value && shiftSelect.value && positionSelect.value) {
         weekdayData.push({
           date: dateInput.value,
           shift: shiftSelect.value,
           position: positionSelect.value,
-          staff: staffInput.value.trim()
+          staff: '张珍'
         });
       }
     }
@@ -383,14 +378,13 @@ function collectFormData() {
   for (let i = 1; i <= weekendRowCount; i++) {
     const dateInput = document.querySelector(`input[name="weekend_date_${i}"]`);
     const shiftSelect = document.querySelector(`select[name="weekend_shift_${i}"]`);
-    const staffInput = document.querySelector(`input[name="weekend_staff_${i}"]`);
     
     if (dateInput && dateInput.closest('tr')) { // 检查行是否还存在
-      if (dateInput.value && shiftSelect.value && staffInput.value) {
+      if (dateInput.value && shiftSelect.value) {
         weekendData.push({
           date: dateInput.value,
           shift: shiftSelect.value,
-          staff: staffInput.value.trim()
+          staff: '张珍'
         });
       }
     }
