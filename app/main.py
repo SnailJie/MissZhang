@@ -359,8 +359,8 @@ def wechat_login():
                              login_keyword=wechat_config.login_keyword,
                              error="微信配置未完成")
     
-    return render_template("wechat_login.html", 
-                         login_keyword=wechat_config.login_keyword)
+    # return render_template("wechat_login.html", 
+    #                      login_keyword=wechat_config.login_keyword)
 
 
 @app.route("/wechat/callback")
@@ -846,7 +846,7 @@ def about():
 
 
 @app.get("/schedule")
-@require_login
+# @require_login
 def schedule():
     # 获取用户信息，用于检查是否已设置姓名
     user_info = get_current_user()
@@ -862,7 +862,7 @@ def serve_schedule_image(filename: str):
 
 # Insider page: preview or upload schedule image by week
 @app.route("/insider", methods=["GET", "POST"])
-@require_login
+# @require_login
 def insider():
     ensure_schedules_dir()
     user_info = get_current_user()
@@ -1056,7 +1056,7 @@ def wechat_verify() -> str:
 
 
 @app.get("/profile")
-@require_login
+# @require_login
 def profile():
     """个人主页"""
     # 从数据库获取用户信息
@@ -1065,7 +1065,7 @@ def profile():
 
 
 @app.post("/api/profile")
-@require_login
+# @require_login
 def api_profile():
     """API端点：保存用户个人信息"""
     try:
