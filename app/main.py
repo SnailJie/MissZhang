@@ -1241,6 +1241,58 @@ def get_week_date_range(year: int, week: int) -> Tuple[str, str]:
     return start_date, end_date
 
 
+def get_week_date_range_iso(year: int, week: int) -> Tuple[str, str]:
+    """根据年份和周数计算该周的开始和结束日期（ISO格式）
+    
+    Args:
+        year: 年份
+        week: 周数（ISO周数）
+    
+    Returns:
+        tuple: (开始日期, 结束日期) 格式为 "YYYY-MM-DD"
+    """
+    # 计算该年该周的周一日期
+    jan4 = date(year, 1, 4)  # 每年的1月4日总是在第一周
+    week1_monday = jan4 - timedelta(days=jan4.weekday())
+    target_monday = week1_monday + timedelta(weeks=week - 1)
+    
+    # 计算周日日期
+    target_sunday = target_monday + timedelta(days=6)
+    
+    return target_monday.strftime("%Y-%m-%d"), target_sunday.strftime("%Y-%m-%d")
+
+
+def format_date_range_display(start_date: str, end_date: str) -> str:
+    """格式化日期范围为友好的显示格式
+    
+    Args:
+        start_date: 开始日期 "YYYY-MM-DD"
+        end_date: 结束日期 "YYYY-MM-DD"
+        
+    Returns:
+        格式化的日期范围，如 "8月18日-8月24日"
+    """
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        
+        start_month = start_dt.month
+        start_day = start_dt.day
+        end_month = end_dt.month
+        end_day = end_dt.day
+        
+        if start_month == end_month:
+            # 同月：8月18日-24日
+            return f"{start_month}月{start_day}日-{end_day}日"
+        else:
+            # 跨月：8月30日-9月5日
+            return f"{start_month}月{start_day}日-{end_month}月{end_day}日"
+            
+    except ValueError:
+        # 如果日期解析失败，返回原始格式
+        return f"{start_date} - {end_date}"
+
+
 def get_available_schedules() -> List[Dict[str, str]]:
     """获取所有可用的排班文件列表，并转换为友好格式"""
     ensure_schedules_dir()
@@ -1337,9 +1389,25 @@ def api_get_schedule_data(week: str):
     try:
         schedule_data = get_schedule_data(week)
         
+        # 计算日期范围
+        date_range = {}
+        if is_valid_week_string(week):
+            parts = week.split('-W')
+            if len(parts) == 2:
+                year = int(parts[0])
+                week_num = int(parts[1])
+                start_date_iso, end_date_iso = get_week_date_range_iso(year, week_num)
+                start_date_cn, end_date_cn = get_week_date_range(year, week_num)
+                date_range = {
+                    "start_date": start_date_iso,
+                    "end_date": end_date_iso,
+                    "display_range": f"{start_date_cn}-{end_date_cn}"
+                }
+        
         # 转换为JSON格式
         result = {
             "week": schedule_data.week,
+            "date_range": date_range,
             "tables": []
         }
         

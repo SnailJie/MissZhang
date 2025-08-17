@@ -90,6 +90,44 @@
   background-color: rgba(107, 227, 255, 0.1);
 }
 
+/* 不同日期的背景色 */
+.weekday-0 { /* 周日 */
+  background-color: rgba(255, 99, 132, 0.1) !important; /* 淡红色 */
+}
+
+.weekday-1 { /* 周一 */
+  background-color: rgba(54, 162, 235, 0.1) !important; /* 淡蓝色 */
+}
+
+.weekday-2 { /* 周二 */
+  background-color: rgba(255, 205, 86, 0.1) !important; /* 淡黄色 */
+}
+
+.weekday-3 { /* 周三 */
+  background-color: rgba(75, 192, 192, 0.1) !important; /* 淡青色 */
+}
+
+.weekday-4 { /* 周四 */
+  background-color: rgba(153, 102, 255, 0.1) !important; /* 淡紫色 */
+}
+
+.weekday-5 { /* 周五 */
+  background-color: rgba(255, 159, 64, 0.1) !important; /* 淡橙色 */
+}
+
+.weekday-6 { /* 周六 */
+  background-color: rgba(201, 203, 207, 0.1) !important; /* 淡灰色 */
+}
+
+/* hover时保持对应的背景色但稍深一些 */
+.weekday-0:hover { background-color: rgba(255, 99, 132, 0.2) !important; }
+.weekday-1:hover { background-color: rgba(54, 162, 235, 0.2) !important; }
+.weekday-2:hover { background-color: rgba(255, 205, 86, 0.2) !important; }
+.weekday-3:hover { background-color: rgba(75, 192, 192, 0.2) !important; }
+.weekday-4:hover { background-color: rgba(153, 102, 255, 0.2) !important; }
+.weekday-5:hover { background-color: rgba(255, 159, 64, 0.2) !important; }
+.weekday-6:hover { background-color: rgba(201, 203, 207, 0.2) !important; }
+
 /* 响应式优化 */
 @media (max-width: 768px) {
   .schedule-container {
@@ -142,6 +180,30 @@
 .weekday-5 { /* 周五 */
   background-color: #d1ecf1 !important; /* 浅蓝色 */
 }
+
+/* 手动填写按钮区域样式 */
+.manual-schedule-section {
+  margin-top: 40px;
+  padding: 30px 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 2px solid #dee2e6;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.manual-schedule-section .btn-lg {
+  padding: 15px 30px;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  transition: all 0.3s ease;
+}
+
+.manual-schedule-section .btn-lg:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
 </style>
 {% endblock %}
 
@@ -151,18 +213,11 @@
     <h1>我的排班</h1>
     <div class="schedule-controls">
       <div class="row g-3">
-        <div class="col-12 col-md-8">
+        <div class="col-12">
           <label for="schedule-select">选择排班周次：</label>
           <select id="schedule-select" name="schedule-select">
             <option value="">正在加载...</option>
           </select>
-        </div>
-        <div class="col-12 col-md-4 d-flex align-items-end">
-          <div class="d-grid gap-2 w-100">
-            <a href="{{ url_for('manual_schedule') }}" class="btn btn-success">
-              ✏️ 手动填写
-            </a>
-          </div>
         </div>
       </div>
     </div>
@@ -170,6 +225,16 @@
       <!-- 排班表内容将通过JavaScript动态生成 -->
       <div class="text-center text-muted">
         <p>请选择排班周次查看数据</p>
+      </div>
+    </div>
+    
+    <!-- 手动填写按钮区域 -->
+    <div class="manual-schedule-section mt-4">
+      <div class="text-center">
+        <a href="{{ url_for('manual_schedule') }}" class="btn btn-success btn-lg">
+          ✏️ 手动填写排班
+        </a>
+        <p class="text-muted mt-2 small">点击上方按钮手动添加或修改排班信息</p>
       </div>
     </div>
   </div>
@@ -457,20 +522,20 @@ function renderMergedScheduleTable(tables) {
       const assignments = dateData.assignments;
       
       if (assignments.length === 0) {
+        const weekdayClass = getWeekdayClass(date);
         html += `
-          <tr>
+          <tr class="${weekdayClass}">
             <td rowspan="1">${date}</td>
             <td colspan="2" class="text-center text-muted">无排班</td>
           </tr>
         `;
       } else {
         assignments.forEach((assignment, index) => {
-          // 获取星期几，用于设置背景色
+          // 获取星期几，用于设置背景色（所有同日期的行都应该有相同背景色）
           const weekdayClass = getWeekdayClass(date);
-          const rowClass = index === 0 ? weekdayClass : '';
           
           html += `
-            <tr class="${rowClass}">
+            <tr class="${weekdayClass}">
           `;
           
           if (index === 0) {
@@ -564,10 +629,12 @@ async function loadScheduleOptions() {
       select.appendChild(option);
     });
     
-    // 默认选择第一个
-    if (availableSchedules.length > 0) {
-      select.value = availableSchedules[0].filename;
-      renderScheduleFromFilename(availableSchedules[0].filename);
+    // 如果没有URL参数，默认选择最后一个（最近的数据）
+    const urlWeek = getWeekFromUrl();
+    if (!urlWeek && availableSchedules.length > 0) {
+      const latestSchedule = availableSchedules[availableSchedules.length - 1];
+      select.value = latestSchedule.filename;
+      renderScheduleFromFilename(latestSchedule.filename);
     }
     
   } catch (error) {
@@ -644,7 +711,13 @@ function fetchAndRenderScheduleData(week) {
 
 // 渲染排班数据为HTML
 function renderScheduleData(data) {
-  let html = `<h5 class="mb-3">第${data.week}周排班表</h5>`;
+  // 使用日期范围作为标题
+  let title = `第${data.week}周排班表`;
+  if (data.date_range && data.date_range.display_range) {
+    title = `${data.date_range.display_range} 排班表`;
+  }
+  
+  let html = `<h5 class="mb-3">${title}</h5>`;
   
   if (!data.tables || data.tables.length === 0) {
     return `
