@@ -162,10 +162,26 @@
         </div>
       </div>
     {% else %}
-      <!-- 上传新图片 -->
-      <div class="card">
-        <div class="card-header">
+      <!-- 新增排班提示区域 -->
+      <div class="card" id="addSchedulePrompt">
+        <div class="card-body text-center py-4">
+          <div class="mb-3">
+            <i class="fas fa-calendar-plus text-muted" style="font-size: 2rem;"></i>
+          </div>
+          <h6 class="text-muted mb-3">没有找到想看的班次？点击下方新增上传</h6>
+          <button type="button" class="btn btn-primary" id="showUploadBtn">
+            ➕ 新增排班
+          </button>
+        </div>
+      </div>
+      
+      <!-- 上传新图片区域（默认隐藏） -->
+      <div class="card" id="uploadScheduleCard" style="display: none;">
+        <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0">上传排班表</h5>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="hideUploadBtn">
+            ✕ 收起
+          </button>
         </div>
         <div class="card-body">
           <form method="post" action="/insider" enctype="multipart/form-data">
@@ -334,6 +350,28 @@ function initializeApp() {
   // 初始化加载
   loadExistingSchedules(); // 加载已有排班表（用于查看）
   loadWeekOptions();       // 加载周次选项（用于上传）
+  
+  // 显示上传区域按钮事件
+  const showUploadBtn = document.getElementById('showUploadBtn');
+  const hideUploadBtn = document.getElementById('hideUploadBtn');
+  const addSchedulePrompt = document.getElementById('addSchedulePrompt');
+  const uploadScheduleCard = document.getElementById('uploadScheduleCard');
+  
+  if (showUploadBtn) {
+    showUploadBtn.addEventListener('click', function() {
+      console.log('显示上传区域');
+      if (addSchedulePrompt) addSchedulePrompt.style.display = 'none';
+      if (uploadScheduleCard) uploadScheduleCard.style.display = 'block';
+    });
+  }
+  
+  if (hideUploadBtn) {
+    hideUploadBtn.addEventListener('click', function() {
+      console.log('隐藏上传区域');
+      if (uploadScheduleCard) uploadScheduleCard.style.display = 'none';
+      if (addSchedulePrompt) addSchedulePrompt.style.display = 'block';
+    });
+  }
   
   // 刷新按钮事件
   const refreshPostBtn = document.getElementById('refreshPostBtn');
