@@ -28,6 +28,9 @@ from app.user_identity import user_identity_manager
 # 导入排班表数据结构
 from app.schedule_data import get_mock_schedule_data, get_schedule_data, ScheduleData
 
+# 导入邮件服务
+from app.email_service import EmailService
+
 # 排班表数据结构定义
 @dataclass
 class ScheduleShift:
@@ -245,10 +248,27 @@ app = Flask(
 # Configure Flask session
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'your_secret_key_here')
 
+# Configure file upload limits
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB limit for file uploads
+
 # Initialize WeChat services
 wechat_config = WeChatConfig()
 wechat_auth = WeChatAuth()
 wechat_service = WeChatService()
+
+# Initialize Email service
+email_service = EmailService()
+
+
+# Error handlers for file upload
+@app.errorhandler(413)
+def too_large(e):
+    """Handle file too large error"""
+    return jsonify({
+        'error': '文件过大',
+        'message': '上传的文件超过16MB限制，请压缩图片后重试',
+        'max_size': '16MB'
+    }), 413
 
 
 def ensure_data_dir() -> None:
@@ -1007,6 +1027,28 @@ def insider():
         image_file.save(save_path)
         print(f"文件已保存为: {save_path}")
 
+        # 发送邮件通知
+        try:
+            week_info = {
+                "label": selected_week["label"],
+                "filename": f"{filename}.{ext}",
+                "value": week_str
+            }
+            
+            email_sent = email_service.send_schedule_notification(
+                week_info=week_info,
+                image_path=save_path,
+                user_info=user_info
+            )
+            
+            if email_sent:
+                print(f"邮件通知发送成功: {week_info['label']}")
+            else:
+                print(f"邮件通知发送失败: {week_info['label']}")
+                
+        except Exception as e:
+            print(f"发送邮件通知时出错: {e}")
+
         return redirect(url_for("insider", week=week_str))
 
     # GET
@@ -1119,6 +1161,13 @@ def api_get_schedule_data(week: str):
 @app.get("/health")
 def health() -> Tuple[str, int]:
     return "ok", 200
+
+
+@app.get("/api/email/test")
+def api_email_test():
+    """测试邮件服务连接"""
+    result = email_service.test_connection()
+    return jsonify(result)
 
 
 @app.get("/readme")

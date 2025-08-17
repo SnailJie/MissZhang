@@ -180,15 +180,16 @@
                     🔄
                   </button>
                 </div>
-                <div class="form-text">
+                <!-- <div class="form-text">
                   ℹ️ 选择任意周次，文件将自动重命名为对应的时间格式
-                </div>
+                </div> -->
               </div>
               <div class="col-12">
                 <label for="image" class="form-label">选择排班表图片</label>
                 <input class="form-control" type="file" accept="image/png,image/jpeg,image/webp" id="image" name="image" required>
                 <div class="form-text">
-                  ℹ️ 请选择本周的排班表图片
+                  ℹ️ 请选择本周的排班表图片（最大16MB）
+                  <br>📱 支持格式：PNG、JPG、WEBP
                 </div>
               </div>
             </div>
@@ -346,7 +347,39 @@ function initializeApp() {
     });
   }
   
-  // 表单提交时确保使用正确的周格式
+  // 文件大小验证函数
+  function validateFileSize(fileInput) {
+    if (!fileInput || fileInput.files.length === 0) {
+      return true; // 没有文件，跳过验证
+    }
+    
+    const file = fileInput.files[0];
+    const maxSize = 16 * 1024 * 1024; // 16MB
+    
+    if (file.size > maxSize) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      alert(`文件过大！\n当前文件大小：${fileSizeMB}MB\n最大允许：16MB\n\n请压缩图片后重试`);
+      return false;
+    }
+    
+    console.log(`文件大小检查通过：${(file.size / (1024 * 1024)).toFixed(2)}MB`);
+    return true;
+  }
+
+  // 为所有包含文件上传的表单添加验证
+  const allForms = document.querySelectorAll('form[method="post"]');
+  allForms.forEach(form => {
+    form.addEventListener('submit', function(e) {
+      // 验证文件大小
+      const fileInput = form.querySelector('input[type="file"]');
+      if (!validateFileSize(fileInput)) {
+        e.preventDefault();
+        return;
+      }
+    });
+  });
+
+  // 表单提交时确保使用正确的周格式和文件大小验证
   const uploadForm = document.querySelector('form[method="post"]');
   if (uploadForm) {
     uploadForm.addEventListener('submit', function(e) {
@@ -365,11 +398,13 @@ function initializeApp() {
         return;
       }
       
+
+      
       console.log('提交的周次:', weekValue);
       
       // 显示确认信息
       const selectedOption = weekPostSelect.options[weekPostSelect.selectedIndex];
-      const confirmMsg = `确认上传排班表到：${selectedOption.textContent}？\n文件将保存为：${weekValue}-MMDD-MMDD.${getFileExtension()}`;
+      const confirmMsg = `确认上传排班表到：${selectedOption.textContent}？`;
       
       if (!confirm(confirmMsg)) {
         e.preventDefault();
